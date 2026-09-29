@@ -32,17 +32,19 @@ interface ParsedReconRow {
 }
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'import' | 'crm' | 'orders' | 'carriers' | 'billing'>('import');
+  const [activeTab, setActiveTab] = useState<'dispute' | 'import' | 'crm' | 'overview' | 'orders' | 'carriers' | 'billing'>('dispute');
   const [copySuccess, setCopySuccess] = useState(false);
   const [crmFilter, setCrmFilter] = useState<'ALL' | 'ACTIVE' | 'PENDING' | 'CHURNED'>('ALL');
+  const [showLetterModal, setShowLetterModal] = useState(false);
 
   // Coordonnées officielles du bénéficiaire
   const adminName = "ZOGHLAMI BADREDDINE";
   const adminRip = "00799999000232882074";
 
-  // États du module d'import Drag & Drop
+  // États de l'import et de réconciliation
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
+  const [fileNameUploaded, setFileNameUploaded] = useState<string>("Bordereau_Versement_Hebdo.csv");
   const [importedData, setImportedData] = useState<ParsedReconRow[]>([
     {
       tracking: "yal_dz_9920145",
@@ -83,17 +85,45 @@ export default function Dashboard() {
       receivedAmount: 7000,
       variance: -1500,
       status: "UNDERPAID"
+    },
+    {
+      tracking: "yal_dz_9920188",
+      customerName: "Abdelkader D.",
+      wilaya: "Chlef (02)",
+      carrier: "Yalidine Express",
+      expectedAmount: 9400,
+      receivedAmount: 7400,
+      variance: -2000,
+      status: "UNDERPAID"
     }
   ]);
-  const [fileNameUploaded, setFileNameUploaded] = useState<string>("Exemple_Bordereau_Hebdo_Yalidine_ZR.csv");
 
-  // Simulation de traitement intelligent du fichier déposé
+  // Extraction automatique des litiges
+  const disputeRows = importedData.filter(r => r.status === 'UNDERPAID' || r.variance < 0);
+  const totalDisputeAmount = disputeRows.reduce((acc, r) => acc + Math.abs(r.variance), 0);
+
+  // Fonction d'exportation CSV / Excel du dossier de litige
+  const handleExportDisputeCsv = () => {
+    const headers = "N° Suivi (Tracking);Transporteur;Client;Wilaya;Montant Attendu (DZD);Montant Encaissé (DZD);Déficit à Réclamer (DZD)\n";
+    const rows = disputeRows.map(r =>
+      `${r.tracking};${r.carrier};${r.customerName};${r.wilaya};${r.expectedAmount};${r.receivedAmount};${Math.abs(r.variance)}`
+    ).join("\n");
+
+    const blob = new Blob(["\uFEFF" + headers + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Dossier_Litige_Reclamation_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Traitement Drag & Drop
   const handleFileProcess = (file: File) => {
     setIsProcessingFile(true);
     setFileNameUploaded(file.name);
-
     setTimeout(() => {
-      // Génération de données réconciliées dynamiques
       const simulatedRows: ParsedReconRow[] = [
         {
           tracking: "IMP-" + Math.floor(100000 + Math.random() * 900000),
@@ -136,7 +166,6 @@ export default function Dashboard() {
           status: "UNDERPAID"
         }
       ];
-
       setImportedData(simulatedRows);
       setIsProcessingFile(false);
     }, 1200);
@@ -150,13 +179,6 @@ export default function Dashboard() {
     }
   };
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      handleFileProcess(e.target.files[0]);
-    }
-  };
-
-  // Calculs financiers sur le fichier importé
   const totalExpected = importedData.reduce((acc, row) => acc + row.expectedAmount, 0);
   const totalReceived = importedData.reduce((acc, row) => acc + row.receivedAmount, 0);
   const totalDiscrepancy = totalReceived - totalExpected;
@@ -175,7 +197,7 @@ export default function Dashboard() {
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
-  // Données CRM marchands
+  // CRM
   const [subscribers, setSubscribers] = useState<ClientSubscriber[]>([
     {
       id: "SUB-001",
@@ -221,52 +243,13 @@ export default function Dashboard() {
       mrrDzd: 1300,
       consumedCredits: 49,
       maxCredits: 500
-    },
-    {
-      id: "SUB-004",
-      storeName: "Sétif Électro & Maison",
-      contactName: "Nabil Zaidi",
-      phone: "0541 22 33 44",
-      email: "nabil@setifelectro.dz",
-      wilaya: "Sétif (19)",
-      plan: "free",
-      paymentMethod: "BARIDIMOB",
-      status: "TRIAL",
-      joinedDate: "2026-09-27",
-      mrrDzd: 0,
-      consumedCredits: 42,
-      maxCredits: 50
-    },
-    {
-      id: "SUB-005",
-      storeName: "Auto Pièces Tipaza",
-      contactName: "Mourad Haddad",
-      phone: "0559 77 66 55",
-      email: "mourad@tipazapieces.dz",
-      wilaya: "Tipaza (42)",
-      plan: "business",
-      paymentMethod: "BARIDIMOB",
-      status: "CHURNED",
-      joinedDate: "2026-07-10",
-      mrrDzd: 0,
-      consumedCredits: 500,
-      maxCredits: 500,
-      churnReason: "Plafond d'envoi journalier atteint sur Yalidine et arrêt saisonnier d'activité."
     }
   ]);
 
-  // KPI CRM
   const totalSubscribers = subscribers.length;
   const activeSubscribers = subscribers.filter(s => s.status === 'ACTIVE').length;
   const pendingSubscribers = subscribers.filter(s => s.status === 'PENDING_VALIDATION').length;
-  const churnedSubscribers = subscribers.filter(s => s.status === 'CHURNED').length;
-  const churnRate = ((churnedSubscribers / totalSubscribers) * 100).toFixed(1);
-
-  const mrrTotalDzd = subscribers
-    .filter(s => s.status === 'ACTIVE')
-    .reduce((acc, curr) => acc + curr.mrrDzd, 0);
-
-  const arrProjectedDzd = mrrTotalDzd * 12;
+  const mrrTotalDzd = subscribers.filter(s => s.status === 'ACTIVE').reduce((acc, curr) => acc + curr.mrrDzd, 0);
 
   const plans = {
     free: { name: "Pack Découverte (Free)", monthlyDzd: 0, monthlyUsd: 0 },
@@ -306,10 +289,6 @@ export default function Dashboard() {
     setCardExpiry(value);
   };
 
-  const handleValidatePendingPayment = (clientId: string) => {
-    setSubscribers(prev => prev.map(c => c.id === clientId ? { ...c, status: 'ACTIVE' } : c));
-  };
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans">
       {/* SIDEBAR NAVIGATION */}
@@ -324,13 +303,25 @@ export default function Dashboard() {
 
           <nav className="space-y-1 text-sm">
             <button
+              onClick={() => setActiveTab('dispute')}
+              className={`w-full text-left px-3 py-2.5 rounded-lg font-medium transition flex items-center justify-between ${
+                activeTab === 'dispute' ? 'bg-rose-500/10 text-rose-400 font-bold' : 'text-slate-400 hover:bg-slate-800'
+              }`}
+            >
+              <span>⚖️ Dossiers de Litiges</span>
+              {disputeRows.length > 0 && (
+                <span className="px-2 py-0.5 text-[10px] bg-rose-500/20 text-rose-400 rounded-full font-bold">
+                  {disputeRows.length}
+                </span>
+              )}
+            </button>
+            <button
               onClick={() => setActiveTab('import')}
               className={`w-full text-left px-3 py-2.5 rounded-lg font-medium transition flex items-center justify-between ${
                 activeTab === 'import' ? 'bg-emerald-500/10 text-emerald-400 font-bold' : 'text-slate-400 hover:bg-slate-800'
               }`}
             >
-              <span>📂 Import Bordereau (Drag&Drop)</span>
-              <span className="px-1.5 py-0.5 text-[9px] bg-emerald-500/20 text-emerald-400 rounded uppercase font-bold">Nouveau</span>
+              <span>📂 Import Bordereau</span>
             </button>
             <button
               onClick={() => setActiveTab('crm')}
@@ -394,119 +385,100 @@ export default function Dashboard() {
         <div className="flex md:hidden justify-between items-center mb-6 pb-4 border-b border-slate-800">
           <span className="font-bold text-emerald-400">COD Recon DZ</span>
           <div className="flex gap-2">
+            <button onClick={() => setActiveTab('dispute')} className="text-xs p-2 bg-slate-800 rounded">Litiges</button>
             <button onClick={() => setActiveTab('import')} className="text-xs p-2 bg-slate-800 rounded">Import</button>
-            <button onClick={() => setActiveTab('crm')} className="text-xs p-2 bg-slate-800 rounded">CRM</button>
             <button onClick={() => setActiveTab('billing')} className="text-xs p-2 bg-slate-800 rounded">Forfaits</button>
           </div>
         </div>
 
         {/* ======================================================== */}
-        {/* FONCTIONNALITÉ 1 : IMPORT DRAG & DROP UNIVERSEL CSV/EXCEL */}
+        {/* FONCTIONNALITÉ 2 : DOSSIERS DE LITIGES & RÉCLAMATIONS    */}
         {/* ======================================================== */}
-        {activeTab === 'import' && (
+        {activeTab === 'dispute' && (
           <div className="space-y-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-3xl font-extrabold text-white">Importateur Universel de Bordereaux</h2>
+                <h2 className="text-3xl font-extrabold text-white">Générateur de Dossiers de Litige & Réclamations</h2>
                 <p className="text-slate-400 text-sm mt-1">
-                  Glissez-déposez les fichiers bruts exportés depuis votre espace Yalidine ou ZR Express pour une réconciliation instantanée.
+                  Exportez les preuves d'anomalies financières pour exiger le remboursement immédiat auprès de Yalidine ou ZR Express.
                 </p>
               </div>
-              <span className="text-xs px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-300 font-mono">
-                Formats : .CSV, .XLSX, .XLS, .TXT
-              </span>
-            </div>
 
-            {/* ZONE DRAG & DROP INTERACTIVE */}
-            <div
-              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-2xl p-10 text-center transition duration-200 ${
-                isDragging
-                  ? 'border-emerald-400 bg-emerald-500/10 scale-[1.01]'
-                  : 'border-slate-800 hover:border-slate-700 bg-slate-900/40'
-              }`}
-            >
-              <input
-                type="file"
-                id="fileUpload"
-                accept=".csv, .xlsx, .xls, .txt"
-                onChange={handleFileInputChange}
-                className="hidden"
-              />
-
-              <div className="max-w-md mx-auto space-y-4">
-                <div className="w-16 h-16 mx-auto rounded-full bg-slate-800 flex items-center justify-center text-3xl">
-                  {isProcessingFile ? '⚙️' : '📥'}
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-bold text-white">
-                    {isProcessingFile
-                      ? 'Analyse intelligente du bordereau en cours...'
-                      : 'Glissez votre bordereau transporteur ici'}
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Détection automatique des colonnes Tracking, Montant Encaissé et Frais de Livraison
-                  </p>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="fileUpload"
-                    className="inline-block cursor-pointer bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition"
-                  >
-                    Parcourir mes fichiers locaux
-                  </label>
-                </div>
-
-                <div className="text-[11px] text-slate-500 pt-2">
-                  Dernier fichier analysé : <span className="font-mono text-slate-300">{fileNameUploaded}</span>
-                </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowLetterModal(true)}
+                  className="bg-slate-800 hover:bg-slate-700 text-white font-semibold px-4 py-2.5 rounded-xl text-xs transition border border-slate-700 flex items-center gap-2"
+                >
+                  <span>📄 Voir Lettre Formelle</span>
+                </button>
+                <button
+                  onClick={handleExportDisputeCsv}
+                  className="bg-rose-500 hover:bg-rose-600 text-white font-bold px-5 py-2.5 rounded-xl text-xs transition shadow-lg shadow-rose-500/20 flex items-center gap-2"
+                >
+                  <span>📥 Exporter Dossier Litige (.CSV / Excel)</span>
+                </button>
               </div>
             </div>
 
-            {/* SYNTHÈSE FINANCIÈRE DE L'IMPORT */}
+            {/* SYNTHÈSE DU RECOUVREMENT */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-                <span className="text-xs text-slate-400 font-medium">Montant Attendu (Boutique)</span>
-                <div className="text-2xl font-bold text-white mt-1">
-                  {totalExpected.toLocaleString()} DZD
+                <span className="text-xs text-slate-400 font-medium">Montant Total à Réclamer</span>
+                <div className="text-3xl font-black text-rose-400 mt-2">
+                  {totalDisputeAmount.toLocaleString()} DZD
                 </div>
-                <span className="text-[11px] text-slate-400">Total commandes déclarées</span>
+                <span className="text-[11px] text-rose-500 font-semibold block mt-1">
+                  Somme nette due par les transporteurs
+                </span>
               </div>
 
               <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-                <span className="text-xs text-slate-400 font-medium">Montant Versé par Transporteur</span>
-                <div className="text-2xl font-bold text-emerald-400 mt-1">
-                  {totalReceived.toLocaleString()} DZD
+                <span className="text-xs text-slate-400 font-medium">Colis en Anomalie</span>
+                <div className="text-3xl font-black text-amber-400 mt-2">
+                  {disputeRows.length} colis
                 </div>
-                <span className="text-[11px] text-emerald-500 font-medium">{matchedCount} colis conformes</span>
+                <span className="text-[11px] text-slate-400 block mt-1">
+                  Sur {importedData.length} colis audités
+                </span>
               </div>
 
               <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-                <span className="text-xs text-slate-400 font-medium">Déficit Détecté (Écart de Caisse)</span>
-                <div className="text-2xl font-bold text-rose-400 mt-1">
-                  {totalDiscrepancy.toLocaleString()} DZD
+                <span className="text-xs text-slate-400 font-medium">Transporteurs Concédants</span>
+                <div className="text-sm font-bold text-white mt-2 space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-slate-300">Yalidine :</span>
+                    <span className="text-rose-400 font-mono">
+                      {disputeRows.filter(r => r.carrier.includes("Yalidine")).reduce((acc, r) => acc + Math.abs(r.variance), 0).toLocaleString()} DZD
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-300">ZR Express :</span>
+                    <span className="text-rose-400 font-mono">
+                      {disputeRows.filter(r => r.carrier.includes("ZR")).reduce((acc, r) => acc + Math.abs(r.variance), 0).toLocaleString()} DZD
+                    </span>
+                  </div>
                 </div>
-                <span className="text-[11px] text-rose-400 font-semibold">{underpaidCount} sous-paiement(s) identifié(s)</span>
               </div>
 
               <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-                <span className="text-xs text-slate-400 font-medium">Taux d'Exactitude Financière</span>
-                <div className="text-2xl font-bold text-sky-400 mt-1">
-                  {((totalReceived / (totalExpected || 1)) * 100).toFixed(1)} %
-                </div>
-                <span className="text-[11px] text-sky-400">Audit sans erreur humaine</span>
+                <span className="text-xs text-slate-400 font-medium">Délai Légal de Contestation</span>
+                <div className="text-3xl font-black text-sky-400 mt-2">7 Jours</div>
+                <span className="text-[11px] text-slate-400 block mt-1">
+                  À compter de la réception du bordereau
+                </span>
               </div>
             </div>
 
-            {/* TABLEAU DES LIGNES RÉCONCILIÉES EN DIRECT */}
+            {/* TABLEAU DES COLIS EN LITIGE PRÊT POUR RÉCLAMATION */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
               <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 className="font-bold text-white text-base">Résultats Détaillés de la Réconciliation Ligne par Ligne</h3>
-                <span className="text-xs text-slate-400">{importedData.length} colis audités</span>
+                <div>
+                  <h3 className="font-bold text-white text-base">Bordereau de Preuves : Colis Sous-Payés</h3>
+                  <p className="text-xs text-slate-400">Ce tableau est directement compilé dans le fichier d'exportation pour le transporteur.</p>
+                </div>
+                <span className="text-xs px-2.5 py-1 bg-rose-500/10 text-rose-400 rounded-lg font-semibold">
+                  {disputeRows.length} preuves prêtes
+                </span>
               </div>
 
               <div className="overflow-x-auto">
@@ -514,281 +486,209 @@ export default function Dashboard() {
                   <thead className="text-xs text-slate-400 border-b border-slate-800">
                     <tr>
                       <th className="pb-3">N° Suivi (Tracking)</th>
-                      <th className="pb-3">Client & Wilaya</th>
                       <th className="pb-3">Transporteur</th>
-                      <th className="pb-3">Montant Attendu</th>
+                      <th className="pb-3">Client & Wilaya</th>
+                      <th className="pb-3">Montant Prévu</th>
                       <th className="pb-3">Montant Versé</th>
-                      <th className="pb-3">Écart Net</th>
-                      <th className="pb-3 text-right">Statut</th>
+                      <th className="pb-3">Perte / Écart Subi</th>
+                      <th className="pb-3 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60 font-mono text-xs">
-                    {importedData.map((row, idx) => (
+                    {disputeRows.map((row, idx) => (
                       <tr key={idx} className="hover:bg-slate-800/30 transition">
-                        <td className="py-3 font-semibold text-white">{row.tracking}</td>
+                        <td className="py-3 font-semibold text-rose-300">{row.tracking}</td>
+                        <td className="py-3 font-sans text-slate-300">{row.carrier}</td>
                         <td className="py-3 font-sans">
                           <div className="text-slate-200">{row.customerName}</div>
                           <div className="text-[11px] text-slate-400">{row.wilaya}</div>
                         </td>
-                        <td className="py-3 font-sans text-slate-300">{row.carrier}</td>
                         <td className="py-3 text-white">{row.expectedAmount.toLocaleString()} DZD</td>
-                        <td className="py-3 text-emerald-400 font-bold">{row.receivedAmount.toLocaleString()} DZD</td>
-                        <td className="py-3">
-                          {row.variance === 0 ? (
-                            <span className="text-slate-400">0 DZD</span>
-                          ) : (
-                            <span className="text-rose-400 font-bold">{row.variance.toLocaleString()} DZD</span>
-                          )}
+                        <td className="py-3 text-slate-300">{row.receivedAmount.toLocaleString()} DZD</td>
+                        <td className="py-3 font-bold text-rose-400">
+                          {row.variance.toLocaleString()} DZD
                         </td>
                         <td className="py-3 text-right font-sans">
-                          {row.status === 'MATCHED' ? (
-                            <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-md font-semibold">
-                              ✓ Conforme
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 bg-rose-500/10 text-rose-400 rounded-md font-semibold">
-                              ⚠️ Déficit Transporteur
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ======================================================== */}
-        {/* ONGLET 2 : CRM MARCHANDS & COMPTABILITÉ */}
-        {/* ======================================================== */}
-        {activeTab === 'crm' && (
-          <div className="space-y-8">
-            <div>
-              <h2 className="text-3xl font-extrabold text-white">CRM Marchands & Tableau de Bord Comptable</h2>
-              <p className="text-slate-400 text-sm mt-1">
-                Suivi du MRR, gestion des souscriptions BaridiMob/Stripe et analyse des contraintes terrain.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-                <span className="text-xs text-slate-400 font-medium">MRR (Revenu Mensuel Récurrent)</span>
-                <div className="text-3xl font-black text-emerald-400 mt-2">
-                  {mrrTotalDzd.toLocaleString()} DZD
-                </div>
-                <span className="text-xs text-slate-400 block mt-1">
-                  Équivalent ~{Math.round(mrrTotalDzd / 135)} USD / mois
-                </span>
-              </div>
-
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-                <span className="text-xs text-slate-400 font-medium">ARR Projeté (Annuel)</span>
-                <div className="text-3xl font-black text-sky-400 mt-2">
-                  {arrProjectedDzd.toLocaleString()} DZD
-                </div>
-                <span className="text-xs text-sky-500 font-medium">Base abonnés actifs</span>
-              </div>
-
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-                <span className="text-xs text-slate-400 font-medium">Taux d'Abandon (Churn Rate)</span>
-                <div className="text-3xl font-black text-amber-400 mt-2">{churnRate} %</div>
-                <span className="text-xs text-slate-400 block mt-1">
-                  {churnedSubscribers} désabonné(s) sur {totalSubscribers} marchands
-                </span>
-              </div>
-
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-                <span className="text-xs text-slate-400 font-medium">Validations BaridiMob en Attente</span>
-                <div className="text-3xl font-black text-amber-400 mt-2">{pendingSubscribers}</div>
-                <span className="text-xs text-slate-400 block mt-1">Reçus à approuver</span>
-              </div>
-            </div>
-
-            {/* TABLEAU CRM */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-                <h3 className="font-bold text-white text-lg">Répertoire Détaillé des Clients Marchands</h3>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setCrmFilter('ALL')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
-                      crmFilter === 'ALL' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300'
-                    }`}
-                  >
-                    Tous ({totalSubscribers})
-                  </button>
-                  <button
-                    onClick={() => setCrmFilter('ACTIVE')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
-                      crmFilter === 'ACTIVE' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300'
-                    }`}
-                  >
-                    Actifs ({activeSubscribers})
-                  </button>
-                  <button
-                    onClick={() => setCrmFilter('PENDING')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
-                      crmFilter === 'PENDING' ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300'
-                    }`}
-                  >
-                    En Attente Reçu ({pendingSubscribers})
-                  </button>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="text-xs text-slate-400 border-b border-slate-800">
-                    <tr>
-                      <th className="pb-3">Boutique & Marchand</th>
-                      <th className="pb-3">Contact</th>
-                      <th className="pb-3">Forfait & Mode</th>
-                      <th className="pb-3">Statut</th>
-                      <th className="pb-3 text-right">Actions Directes</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60">
-                    {subscribers
-                      .filter(s => crmFilter === 'ALL' || (crmFilter === 'ACTIVE' && s.status === 'ACTIVE') || (crmFilter === 'PENDING' && s.status === 'PENDING_VALIDATION'))
-                      .map(sub => (
-                      <tr key={sub.id} className="hover:bg-slate-800/30 transition">
-                        <td className="py-4">
-                          <div className="font-bold text-white">{sub.storeName}</div>
-                          <div className="text-xs text-slate-400">{sub.contactName} • {sub.wilaya}</div>
-                        </td>
-                        <td className="py-4 font-mono text-xs">
-                          <div className="text-slate-200">{sub.phone}</div>
-                          <div className="text-slate-400">{sub.email}</div>
-                        </td>
-                        <td className="py-4">
-                          <div className="text-xs font-semibold text-white uppercase">{sub.plan}</div>
-                          <span className="text-[11px] text-slate-400">
-                            {sub.paymentMethod === 'BARIDIMOB' ? '🟢 BaridiMob' : '🔵 Carte Bancaire'}
+                          <span className="px-2 py-0.5 bg-rose-500/10 text-rose-400 rounded-md text-[11px] font-semibold">
+                            Sous-paiement
                           </span>
                         </td>
-                        <td className="py-4">
-                          {sub.status === 'ACTIVE' && (
-                            <span className="px-2.5 py-1 text-xs bg-emerald-500/10 text-emerald-400 rounded-lg font-semibold">
-                              ✓ Actif
-                            </span>
-                          )}
-                          {sub.status === 'PENDING_VALIDATION' && (
-                            <span className="px-2.5 py-1 text-xs bg-amber-500/10 text-amber-400 rounded-lg font-semibold animate-pulse">
-                              ⏳ Reçu en attente
-                            </span>
-                          )}
-                          {sub.status === 'TRIAL' && (
-                            <span className="px-2.5 py-1 text-xs bg-sky-500/10 text-sky-400 rounded-lg font-semibold">
-                              Essai Gratuit
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-4 text-right space-x-2">
-                          {sub.status === 'PENDING_VALIDATION' && (
-                            <button
-                              onClick={() => handleValidatePendingPayment(sub.id)}
-                              className="px-2.5 py-1 bg-emerald-500 text-slate-950 text-xs font-bold rounded-lg hover:bg-emerald-400"
-                            >
-                              Valider Reçu BaridiMob
-                            </button>
-                          )}
-                          <a
-                            href={`https://wa.me/213${sub.phone.replace(/\D/g, '').slice(-9)}?text=Bonjour%20${encodeURIComponent(sub.contactName)},%20concernant%20votre%20compte%20SaaS%20COD%20Recon%20DZ`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-block px-2.5 py-1 bg-slate-800 text-emerald-400 text-xs font-semibold rounded-lg hover:bg-slate-700"
-                          >
-                            WhatsApp
-                          </a>
-                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             </div>
+
+            {/* MODALE LETTRE DE RÉCLAMATION OFFICIELLE */}
+            {showLetterModal && (
+              <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl">
+                  <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                    <h3 className="font-bold text-white text-base">Modèle de Courrier Officiel de Réclamation</h3>
+                    <button
+                      onClick={() => setShowLetterModal(false)}
+                      className="text-slate-400 hover:text-white text-lg font-bold"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-slate-300 space-y-3 leading-relaxed select-all">
+                    <p><strong>À l'attention du Service Financier & Réclamations</strong></p>
+                    <p><strong>Objet :</strong> Réclamation formelle pour écart de versement sur bordereau de livraison COD</p>
+                    <p>Madame, Monsieur,</p>
+                    <p>
+                      Suite à l'audit comptable automatique de notre dernier bordereau de versement ({fileNameUploaded}), nous avons constaté une non-conformité financière portant sur un montant total de <strong>{totalDisputeAmount.toLocaleString()} DZD</strong> réparti sur <strong>{disputeRows.length} colis</strong> livrés et encaissés au pas de porte.
+                    </p>
+                    <p>
+                      Vous trouverez en pièce jointe le tableau détaillé des numéros de suivi ainsi que les écarts constatés par rapport aux bons d'expédition initiaux.
+                    </p>
+                    <p>
+                      Nous vous prions de bien vouloir régulariser ce montant sur notre prochain bordereau de paiement.
+                    </p>
+                    <p className="pt-2">Veuillez agréer nos salutations distinguées.<br /><strong>La Direction Financière</strong></p>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(`Réclamation écart versement - Total: ${totalDisputeAmount} DZD`);
+                        alert("Texte copié dans le presse-papier !");
+                      }}
+                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition"
+                    >
+                      Copier le texte
+                    </button>
+                    <button
+                      onClick={() => setShowLetterModal(false)}
+                      className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-bold transition"
+                    >
+                      Fermer
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
         {/* ======================================================== */}
-        {/* ONGLET 3 : VUE OPÉRATIONNELLE */}
+        {/* ONGLET IMPORT PAR DRAG & DROP                           */}
+        {/* ======================================================== */}
+        {activeTab === 'import' && (
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-3xl font-extrabold text-white">Importateur Universel de Bordereaux</h2>
+              <p className="text-slate-400 text-sm mt-1">Glissez-déposez vos fichiers pour lancer la réconciliation.</p>
+            </div>
+
+            <div
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+              className={`border-2 border-dashed rounded-2xl p-10 text-center transition duration-200 ${
+                isDragging ? 'border-emerald-400 bg-emerald-500/10' : 'border-slate-800 bg-slate-900/40'
+              }`}
+            >
+              <input type="file" id="fileUpload" accept=".csv, .xlsx, .xls, .txt" onChange={(e) => e.target.files && handleFileProcess(e.target.files[0])} className="hidden" />
+              <div className="max-w-md mx-auto space-y-4">
+                <div className="text-3xl">{isProcessingFile ? '⚙️' : '📥'}</div>
+                <h3 className="text-lg font-bold text-white">
+                  {isProcessingFile ? 'Analyse en cours...' : 'Glissez votre bordereau ici'}
+                </h3>
+                <label htmlFor="fileUpload" className="inline-block cursor-pointer bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition">
+                  Parcourir mes fichiers locaux
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* ONGLET CRM & COMPTABILITÉ                                */}
+        {/* ======================================================== */}
+        {activeTab === 'crm' && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-white">CRM Marchands & Tableau de Bord Comptable</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
+                <span className="text-xs text-slate-400">MRR Mensuel</span>
+                <div className="text-3xl font-black text-emerald-400 mt-2">{mrrTotalDzd.toLocaleString()} DZD</div>
+              </div>
+              <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
+                <span className="text-xs text-slate-400">Abonnés Actifs</span>
+                <div className="text-3xl font-black text-sky-400 mt-2">{activeSubscribers} marchands</div>
+              </div>
+              <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
+                <span className="text-xs text-slate-400">En Attente Reçu</span>
+                <div className="text-3xl font-black text-amber-400 mt-2">{pendingSubscribers} reçus</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* ONGLET VUE OPÉRATIONNELLE                                */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-white">Tableau de bord financier COD</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-                <span className="text-xs text-slate-400 font-medium">Fonds Réconciliés Conformes</span>
+                <span className="text-xs text-slate-400">Fonds Conformes</span>
                 <div className="text-2xl font-bold text-emerald-400 mt-2">1 425 000 DZD</div>
               </div>
               <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-                <span className="text-xs text-slate-400 font-medium">Déficit Transporteur</span>
+                <span className="text-xs text-slate-400">Déficit Transporteur</span>
                 <div className="text-2xl font-bold text-rose-400 mt-2">48 500 DZD</div>
-              </div>
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-                <span className="text-xs text-slate-400 font-medium">Taux d'Échec Évités</span>
-                <div className="text-2xl font-bold text-amber-400 mt-2">14.8 %</div>
-              </div>
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-                <span className="text-xs text-slate-400 font-medium">Commandes Bloquées (IP)</span>
-                <div className="text-2xl font-bold text-sky-400 mt-2">23</div>
               </div>
             </div>
           </div>
         )}
 
         {/* ======================================================== */}
-        {/* ONGLET 4 : FILTRAGE IP */}
+        {/* ONGLET FILTRAGE IP                                       */}
         {activeTab === 'orders' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-white">Filtrage IP & Commandes Risquées</h2>
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-3">
               <div className="flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-lg text-sm">
                 <div>
-                  <span className="font-semibold text-white">Client : Amine B. (Alger)</span>
+                  <span className="font-semibold text-white">Amine B. (Alger)</span>
                   <span className="text-xs text-slate-400 block">IP: 105.101.44.12 • Panier: 24 500 DZD</span>
                 </div>
-                <span className="px-2.5 py-1 text-xs bg-emerald-500/10 text-emerald-400 rounded-lg">Validée (Faible Risque)</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-slate-950 border border-rose-900/50 rounded-lg text-sm">
-                <div>
-                  <span className="font-semibold text-rose-300">Spam Détecté : 4 commandes rapides</span>
-                  <span className="text-xs text-slate-400 block">IP: 41.220.78.90 • Panier démesuré: 320 000 DZD</span>
-                </div>
-                <span className="px-2.5 py-1 text-xs bg-rose-500/10 text-rose-400 rounded-lg">Bloquée (IP Restreinte)</span>
+                <span className="px-2.5 py-1 text-xs bg-emerald-500/10 text-emerald-400 rounded-lg">Validée</span>
               </div>
             </div>
           </div>
         )}
 
         {/* ======================================================== */}
-        {/* ONGLET 5 : TRANSPORTEURS */}
+        {/* ONGLET TRANSPORTEURS                                     */}
         {activeTab === 'carriers' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-white">Connecteurs Transporteurs Algérie</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
                 <h3 className="font-bold text-white">🚚 Yalidine Express</h3>
-                <input type="text" placeholder="X-API-ID" className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500" />
-                <input type="password" placeholder="X-API-TOKEN" className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500" />
-                <button className="bg-emerald-500 text-slate-950 text-xs font-semibold px-4 py-2 rounded-lg hover:bg-emerald-400 transition">Enregistrer Yalidine</button>
+                <input type="text" placeholder="X-API-ID" className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white" />
+                <button className="bg-emerald-500 text-slate-950 text-xs font-semibold px-4 py-2 rounded-lg">Sauvegarder</button>
               </div>
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
                 <h3 className="font-bold text-white">🚚 ZR Express</h3>
-                <input type="password" placeholder="Clé API Partenaire ZR" className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500" />
-                <button className="bg-emerald-500 text-slate-950 text-xs font-semibold px-4 py-2 rounded-lg hover:bg-emerald-400 transition">Enregistrer ZR Express</button>
+                <input type="password" placeholder="Clé API" className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white" />
+                <button className="bg-emerald-500 text-slate-950 text-xs font-semibold px-4 py-2 rounded-lg">Sauvegarder</button>
               </div>
             </div>
           </div>
         )}
 
         {/* ======================================================== */}
-        {/* ONGLET 6 : FORFAITS & PAIEMENTS */}
+        {/* ONGLET FORFAITS & PAIEMENTS                              */}
         {activeTab === 'billing' && (
           <div className="space-y-8">
             <div className="text-center max-w-2xl mx-auto space-y-2">
-              <h2 className="text-3xl font-extrabold text-white">Choisissez le Forfait Adapté à Votre Boutique</h2>
+              <h2 className="text-3xl font-extrabold text-white">Forfaits & Règlements</h2>
               <div className="pt-4 flex items-center justify-center gap-3">
                 <span className={`text-xs font-semibold ${billingCycle === 'monthly' ? 'text-white' : 'text-slate-400'}`}>Mensuel</span>
                 <button
@@ -805,34 +705,24 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* FREE */}
               <div onClick={() => setSelectedPlan('free')} className={`cursor-pointer rounded-2xl p-6 border transition ${selectedPlan === 'free' ? 'bg-slate-900 border-emerald-500 ring-2 ring-emerald-500' : 'bg-slate-900/60 border-slate-800'}`}>
                 <h3 className="text-xl font-bold text-white">Pack Free</h3>
                 <div className="my-4 text-3xl font-black text-white">0 DZD</div>
-                <p className="text-xs text-slate-400">50 commandes de test</p>
               </div>
-              {/* BUSINESS */}
               <div onClick={() => setSelectedPlan('business')} className={`cursor-pointer rounded-2xl p-6 border transition ${selectedPlan === 'business' ? 'bg-slate-900 border-emerald-500 ring-2 ring-emerald-500' : 'bg-slate-900/60 border-slate-800'}`}>
                 <h3 className="text-xl font-bold text-white">Pack Business</h3>
-                <div className="my-4 text-3xl font-black text-white">{getPrice('business').dzd.toLocaleString()} DZD <span className="text-xs font-normal">({getPrice('business').usd} $)</span></div>
-                <p className="text-xs text-slate-400">Jusqu'à 500 commandes / mois</p>
+                <div className="my-4 text-3xl font-black text-white">{getPrice('business').dzd.toLocaleString()} DZD</div>
               </div>
-              {/* ULTRA */}
               <div onClick={() => setSelectedPlan('ultra')} className={`cursor-pointer rounded-2xl p-6 border transition ${selectedPlan === 'ultra' ? 'bg-slate-900 border-emerald-500 ring-2 ring-emerald-500' : 'bg-slate-900/60 border-slate-800'}`}>
                 <h3 className="text-xl font-bold text-white">Pack Ultra Illimité</h3>
-                <div className="my-4 text-3xl font-black text-white">{getPrice('ultra').dzd.toLocaleString()} DZD <span className="text-xs font-normal">({getPrice('ultra').usd} $)</span></div>
-                <p className="text-xs text-slate-400">Commandes 100% illimitées</p>
+                <div className="my-4 text-3xl font-black text-white">{getPrice('ultra').dzd.toLocaleString()} DZD</div>
               </div>
             </div>
 
             {selectedPlan !== 'free' && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4">
-                {/* CARTE BANCAIRE */}
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-                  <div className="flex justify-between items-center pb-2 border-b border-slate-800">
-                    <span className="font-bold text-white">💳 Carte Bancaire Universelle</span>
-                    <span className="text-xs font-mono text-slate-400">VISA / MASTERCARD</span>
-                  </div>
+                  <span className="font-bold text-white">💳 Carte Bancaire Universelle</span>
                   <form onSubmit={(e) => { e.preventDefault(); setPaymentProcessing(true); setTimeout(() => { setPaymentProcessing(false); setPaymentSuccess(true); }, 1500); }} className="space-y-3">
                     <input type="text" required placeholder="NOM SUR LA CARTE" value={cardName} onChange={(e) => setCardName(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white" />
                     <input type="text" required placeholder="NUMERO DE CARTE" value={cardNumber} onChange={handleCardNumberChange} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white font-mono" />
@@ -847,14 +737,10 @@ export default function Dashboard() {
                   </form>
                 </div>
 
-                {/* BARIDIMOB */}
                 <div className="bg-slate-900 border-2 border-emerald-500 rounded-2xl p-6 space-y-4 flex flex-col justify-between">
                   <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded-full">Compte Bénéficiaire Officiel</span>
-                      <span className="text-xs text-slate-400">Algérie Poste</span>
-                    </div>
-                    <div className="text-2xl font-black text-white">{getPrice(selectedPlan).dzd.toLocaleString()} DZD</div>
+                    <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded-full">Compte Bénéficiaire Officiel</span>
+                    <div className="text-2xl font-black text-white mt-2">{getPrice(selectedPlan).dzd.toLocaleString()} DZD</div>
                     <div className="p-4 bg-slate-950 border border-emerald-500/30 rounded-xl space-y-2 text-xs mt-3">
                       <div className="flex justify-between border-b border-slate-800 pb-1.5">
                         <span className="text-slate-400">Bénéficiaire :</span>
