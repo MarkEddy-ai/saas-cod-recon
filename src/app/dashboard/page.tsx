@@ -30,6 +30,19 @@ interface GhostPackage {
   severity: 'WARNING' | 'CRITICAL_LOST';
 }
 
+interface RtoAuditRow {
+  tracking: string;
+  carrier: string;
+  customerName: string;
+  wilaya: string;
+  returnReason: string;
+  negotiatedReturnFee: number;
+  chargedReturnFee: number;
+  overchargedFee: number;
+  callLogVerified: boolean;
+  status: 'OVERCHARGED' | 'UNJUSTIFIED' | 'CONFORME';
+}
+
 interface ParsedReconRow {
   tracking: string;
   customerName: string;
@@ -42,16 +55,88 @@ interface ParsedReconRow {
 }
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState<'ghosts' | 'dispute' | 'import' | 'crm' | 'overview' | 'orders' | 'carriers' | 'billing'>('ghosts');
+  const [activeTab, setActiveTab] = useState<'rto_audit' | 'ghosts' | 'dispute' | 'import' | 'crm' | 'overview' | 'orders' | 'carriers' | 'billing'>('rto_audit');
   const [copySuccess, setCopySuccess] = useState(false);
-  const [showLetterModal, setShowLetterModal] = useState(false);
 
   // Coordonnées officielles du bénéficiaire
   const adminName = "ZOGHLAMI BADREDDINE";
   const adminRip = "00799999000232882074";
 
-  // DONNÉES COLIS FANTÔMES (Stuck / Bloqués en hub)
-  const [ghostPackages, setGhostPackages] = useState<GhostPackage[]>([
+  // DONNÉES AUDIT DES RETOURS (RTO AUDIT)
+  const [rtoAudits, setRtoAudits] = useState<RtoAuditRow[]>([
+    {
+      tracking: "yal_ret_104821",
+      carrier: "Yalidine Express",
+      customerName: "Kamel Zerrouki",
+      wilaya: "Boumerdès (35)",
+      returnReason: "Client Injoignable",
+      negotiatedReturnFee: 200,
+      chargedReturnFee: 550,
+      overchargedFee: 350,
+      callLogVerified: false,
+      status: "OVERCHARGED"
+    },
+    {
+      tracking: "zr_ret_992144",
+      carrier: "ZR Express",
+      customerName: "Imane Sahli",
+      wilaya: "Tizi Ouzou (15)",
+      returnReason: "Adresse Incomplète",
+      negotiatedReturnFee: 250,
+      chargedReturnFee: 600,
+      overchargedFee: 350,
+      callLogVerified: false,
+      status: "UNJUSTIFIED"
+    },
+    {
+      tracking: "yal_ret_104899",
+      carrier: "Yalidine Express",
+      customerName: "Tahar Bouzid",
+      wilaya: "Médéa (26)",
+      returnReason: "Refus - Colis Non Conforme",
+      negotiatedReturnFee: 250,
+      chargedReturnFee: 250,
+      overchargedFee: 0,
+      callLogVerified: true,
+      status: "CONFORME"
+    },
+    {
+      tracking: "zr_ret_774012",
+      carrier: "ZR Express",
+      customerName: "Nadia Cherfa",
+      wilaya: "Biskra (07)",
+      returnReason: "Client Absent",
+      negotiatedReturnFee: 300,
+      chargedReturnFee: 750,
+      overchargedFee: 450,
+      callLogVerified: false,
+      status: "OVERCHARGED"
+    }
+  ]);
+
+  // Calculs RTO Audit
+  const totalRtoOvercharged = rtoAudits.reduce((acc, r) => acc + r.overchargedFee, 0);
+  const totalRtoCount = rtoAudits.length;
+  const unjustifiedCount = rtoAudits.filter(r => r.status === 'UNJUSTIFIED' || !r.callLogVerified).length;
+
+  const handleExportRtoAuditCsv = () => {
+    const headers = "N° Tracking;Transporteur;Client;Wilaya;Motif de Retour;Frais Convenus (DZD);Frais Facturés (DZD);Trop-Perçu à Rembourser (DZD);Appel Vérifié;Statut\n";
+    const rows = rtoAudits.map(r =>
+      `${r.tracking};${r.carrier};${r.customerName};${r.wilaya};${r.returnReason};${r.negotiatedReturnFee};${r.chargedReturnFee};${r.overchargedFee};${r.callLogVerified ? 'Oui' : 'Non'};${r.status}`
+    ).join("\n");
+
+    const blob = new Blob(["\uFEFF" + headers + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Audit_Frais_Retour_RTO_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // DONNÉES COLIS FANTÔMES
+  const [ghostPackages] = useState<GhostPackage[]>([
     {
       tracking: "yal_dz_7701923",
       carrier: "Yalidine Express",
@@ -71,35 +156,13 @@ export default function Dashboard() {
       daysStuck: 12,
       declaredValueDzd: 14200,
       severity: "WARNING"
-    },
-    {
-      tracking: "yal_dz_9918231",
-      carrier: "Yalidine Express",
-      customerName: "Lyes Amara",
-      wilaya: "Béjaïa (06)",
-      lastHubLocation: "Centre de Tri Oued Smar (Alger)",
-      daysStuck: 19,
-      declaredValueDzd: 22000,
-      severity: "CRITICAL_LOST"
-    },
-    {
-      tracking: "zr_exp_339102",
-      carrier: "ZR Express",
-      customerName: "Bilal Khelifi",
-      wilaya: "Mostaganem (27)",
-      lastHubLocation: "Hub Transit Chlef",
-      daysStuck: 8,
-      declaredValueDzd: 9500,
-      severity: "WARNING"
     }
   ]);
 
-  // Calculs Colis Fantômes
   const totalStuckCapital = ghostPackages.reduce((acc, p) => acc + p.declaredValueDzd, 0);
-  const criticalLostCount = ghostPackages.filter(p => p.severity === 'CRITICAL_LOST').length;
 
-  // DONNÉES RÉCONCILIATION & LITIGES
-  const [importedData, setImportedData] = useState<ParsedReconRow[]>([
+  // LITIGES
+  const [importedData] = useState<ParsedReconRow[]>([
     {
       tracking: "yal_dz_9920145",
       customerName: "Mohamed Amine",
@@ -119,37 +182,17 @@ export default function Dashboard() {
       receivedAmount: 10500,
       variance: -1500,
       status: "UNDERPAID"
-    },
-    {
-      tracking: "zr_exp_443021",
-      customerName: "Fatima Zohra",
-      wilaya: "Constantine (25)",
-      carrier: "ZR Express",
-      expectedAmount: 4800,
-      receivedAmount: 4800,
-      variance: 0,
-      status: "MATCHED"
-    },
-    {
-      tracking: "zr_exp_443022",
-      customerName: "Samir Kaci",
-      wilaya: "Blida (09)",
-      carrier: "ZR Express",
-      expectedAmount: 8500,
-      receivedAmount: 7000,
-      variance: -1500,
-      status: "UNDERPAID"
     }
   ]);
 
   const disputeRows = importedData.filter(r => r.status === 'UNDERPAID' || r.variance < 0);
   const totalDisputeAmount = disputeRows.reduce((acc, r) => acc + Math.abs(r.variance), 0);
 
-  // Tarification
+  // FORFAITS
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'business' | 'ultra'>('business');
 
-  // Formulaire Carte
+  // FORMULAIRE CARTE
   const [cardName, setCardName] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
@@ -157,7 +200,7 @@ export default function Dashboard() {
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
-  // Données CRM
+  // CRM
   const [subscribers] = useState<ClientSubscriber[]>([
     {
       id: "SUB-001",
@@ -173,21 +216,6 @@ export default function Dashboard() {
       mrrDzd: 4500,
       consumedCredits: 1240,
       maxCredits: 999999
-    },
-    {
-      id: "SUB-002",
-      storeName: "Oran Tech Express",
-      contactName: "Sofiane Mansouri",
-      phone: "0661 88 99 00",
-      email: "sofiane@orantech.dz",
-      wilaya: "Oran (31)",
-      plan: "business",
-      paymentMethod: "STRIPE_CARD",
-      status: "ACTIVE",
-      joinedDate: "2026-09-02",
-      mrrDzd: 1300,
-      consumedCredits: 380,
-      maxCredits: 500
     }
   ]);
 
@@ -216,20 +244,17 @@ export default function Dashboard() {
     setTimeout(() => setCopySuccess(false), 2500);
   };
 
-  const handleExportGhostPackagesCsv = () => {
-    const headers = "N° Suivi;Transporteur;Client;Wilaya;Dernier Hub Connu;Jours d'Immobilisation;Valeur Marchande (DZD);Gravité\n";
-    const rows = ghostPackages.map(p =>
-      `${p.tracking};${p.carrier};${p.customerName};${p.wilaya};${p.lastHubLocation};${p.daysStuck};${p.declaredValueDzd};${p.severity === 'CRITICAL_LOST' ? 'Présumé Perdu' : 'Alerte Blocage'}`
-    ).join("\n");
+  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length > 16) value = value.slice(0, 16);
+    setCardNumber(value.match(/.{1,4}/g)?.join(' ') || value);
+  };
 
-    const blob = new Blob(["\uFEFF" + headers + rows], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Colis_Bloques_Hubs_Yalidine_ZR_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length > 4) value = value.slice(0, 4);
+    if (value.length >= 3) value = `${value.slice(0, 2)}/${value.slice(2)}`;
+    setCardExpiry(value);
   };
 
   return (
@@ -245,6 +270,19 @@ export default function Dashboard() {
           </div>
 
           <nav className="space-y-1 text-sm">
+            <button
+              onClick={() => setActiveTab('rto_audit')}
+              className={`w-full text-left px-3 py-2.5 rounded-lg font-medium transition flex items-center justify-between ${
+                activeTab === 'rto_audit' ? 'bg-rose-500/10 text-rose-400 font-bold' : 'text-slate-400 hover:bg-slate-800'
+              }`}
+            >
+              <span>🔄 Audit Frais de Retour</span>
+              {totalRtoOvercharged > 0 && (
+                <span className="px-2 py-0.5 text-[10px] bg-rose-500/20 text-rose-400 rounded-full font-bold">
+                  -{totalRtoOvercharged} DA
+                </span>
+              )}
+            </button>
             <button
               onClick={() => setActiveTab('ghosts')}
               className={`w-full text-left px-3 py-2.5 rounded-lg font-medium transition flex items-center justify-between ${
@@ -332,86 +370,86 @@ export default function Dashboard() {
 
       {/* CONTENU PRINCIPAL */}
       <main className="flex-1 p-8 overflow-y-auto">
-        {/* Navigation Mobile */}
+        {/* Header Mobile */}
         <div className="flex md:hidden justify-between items-center mb-6 pb-4 border-b border-slate-800">
           <span className="font-bold text-emerald-400">COD Recon DZ</span>
           <div className="flex gap-2">
+            <button onClick={() => setActiveTab('rto_audit')} className="text-xs p-2 bg-slate-800 rounded">Retours</button>
             <button onClick={() => setActiveTab('ghosts')} className="text-xs p-2 bg-slate-800 rounded">Fantômes</button>
-            <button onClick={() => setActiveTab('dispute')} className="text-xs p-2 bg-slate-800 rounded">Litiges</button>
             <button onClick={() => setActiveTab('billing')} className="text-xs p-2 bg-slate-800 rounded">Forfaits</button>
           </div>
         </div>
 
         {/* ======================================================== */}
-        {/* FONCTIONNALITÉ 3 : DÉTECTION DES COLIS FANTÔMES          */}
+        {/* FONCTIONNALITÉ 4 : CALCULATEUR & AUDIT DES RETOURS (RTO) */}
         {/* ======================================================== */}
-        {activeTab === 'ghosts' && (
+        {activeTab === 'rto_audit' && (
           <div className="space-y-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-3xl font-extrabold text-white">Radar Anti-Colis Fantômes & Bloqués en Hub</h2>
+                <h2 className="text-3xl font-extrabold text-white">Calculateur & Audit des Frais de Retour (RTO)</h2>
                 <p className="text-slate-400 text-sm mt-1">
-                  Surveillance des colis immobiles depuis plus de 7 jours chez Yalidine et ZR Express sans tentative de livraison ni retour.
+                  Détection des retours surfacturés par rapport à vos tarifs contractuels et contestation des faux échecs de livraison.
                 </p>
               </div>
 
               <button
-                onClick={handleExportGhostPackagesCsv}
-                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-xs transition shadow-lg shadow-amber-500/20 flex items-center gap-2"
+                onClick={handleExportRtoAuditCsv}
+                className="bg-rose-500 hover:bg-rose-600 text-white font-bold px-5 py-2.5 rounded-xl text-xs transition shadow-lg shadow-rose-500/20 flex items-center gap-2"
               >
-                <span>📥 Exporter Liste des Colis Bloqués (.CSV)</span>
+                <span>📥 Exporter Bordereau de Surfacturation (.CSV)</span>
               </button>
             </div>
 
-            {/* SYNTHÈSE DES STOCKS IMMOBILISÉS DANS LA NATURE */}
+            {/* SYNTHÈSE DE LA SURFACTURATION */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-                <span className="text-xs text-slate-400 font-medium">Marchandise Bloquée en Transit</span>
-                <div className="text-3xl font-black text-amber-400 mt-2">
-                  {totalStuckCapital.toLocaleString()} DZD
-                </div>
-                <span className="text-[11px] text-amber-500 font-semibold block mt-1">
-                  Capital immobilisé chez les transporteurs
-                </span>
-              </div>
-
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-                <span className="text-xs text-slate-400 font-medium">Colis Bloqués (> 7 jours)</span>
-                <div className="text-3xl font-black text-white mt-2">
-                  {ghostPackages.length} colis
-                </div>
-                <span className="text-[11px] text-slate-400 block mt-1">
-                  Absence de mise à jour de tracking
-                </span>
-              </div>
-
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-                <span className="text-xs text-slate-400 font-medium">Présumés Perdus (> 15 jours)</span>
+                <span className="text-xs text-slate-400 font-medium">Surfacturation RTO Détectée</span>
                 <div className="text-3xl font-black text-rose-400 mt-2">
-                  {criticalLostCount} colis
+                  +{totalRtoOvercharged.toLocaleString()} DZD
                 </div>
                 <span className="text-[11px] text-rose-500 font-semibold block mt-1">
-                  Éligibles au remboursement valeur marchande
+                  Trop-perçu prélevé indûment
                 </span>
               </div>
 
               <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-                <span className="text-xs text-slate-400 font-medium">Temps Moyen de Blocage</span>
-                <div className="text-3xl font-black text-sky-400 mt-2">
-                  13.8 Jours
+                <span className="text-xs text-slate-400 font-medium">Colis Retournés Audités</span>
+                <div className="text-3xl font-black text-white mt-2">
+                  {totalRtoCount} colis
                 </div>
                 <span className="text-[11px] text-slate-400 block mt-1">
-                  Seuil critique toléré : 5 jours
+                  Sur le dernier cycle de facturation
+                </span>
+              </div>
+
+              <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
+                <span className="text-xs text-slate-400 font-medium">Faux Échecs / Non Justifiés</span>
+                <div className="text-3xl font-black text-amber-400 mt-2">
+                  {unjustifiedCount} colis
+                </div>
+                <span className="text-[11px] text-amber-500 font-semibold block mt-1">
+                  Zéro preuve d'appel au destinataire
+                </span>
+              </div>
+
+              <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
+                <span className="text-xs text-slate-400 font-medium">Économie Potentielle</span>
+                <div className="text-3xl font-black text-emerald-400 mt-2">
+                  {Math.round((totalRtoOvercharged / 1150) * 100)} %
+                </div>
+                <span className="text-[11px] text-emerald-400 block mt-1">
+                  Récupération sur prochaine quittance
                 </span>
               </div>
             </div>
 
-            {/* TABLEAU DES COLIS FANTÔMES */}
+            {/* TABLEAU DES RETOURS AUDITÉS */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
               <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 className="font-bold text-white text-base">Détail des Colis Suspects sans Statut Récent</h3>
-                <span className="text-xs px-2.5 py-1 bg-amber-500/10 text-amber-400 rounded-lg font-semibold">
-                  Alerte Perte de Stock Active
+                <h3 className="font-bold text-white text-base">Audit Ligne par Ligne des Retours Facturés</h3>
+                <span className="text-xs px-2.5 py-1 bg-slate-800 text-slate-300 rounded-lg">
+                  Grille contractuelle active : 200 à 300 DZD / retour
                 </span>
               </div>
 
@@ -421,45 +459,45 @@ export default function Dashboard() {
                     <tr>
                       <th className="pb-3">N° Tracking</th>
                       <th className="pb-3">Transporteur</th>
-                      <th className="pb-3">Dernière Localisation Hub</th>
-                      <th className="pb-3">Immobilisation</th>
-                      <th className="pb-3">Valeur Déclarée</th>
-                      <th className="pb-3">Statut Risque</th>
-                      <th className="pb-3 text-right">Action Proactive</th>
+                      <th className="pb-3">Client & Wilaya</th>
+                      <th className="pb-3">Motif Invoqué</th>
+                      <th className="pb-3">Tarif Convenu</th>
+                      <th className="pb-3">Tarif Prélevé</th>
+                      <th className="pb-3">Écart Trop-Perçu</th>
+                      <th className="pb-3 text-right">Preuve d'Appel</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60 font-mono text-xs">
-                    {ghostPackages.map((pkg, idx) => (
+                    {rtoAudits.map((item, idx) => (
                       <tr key={idx} className="hover:bg-slate-800/30 transition">
-                        <td className="py-3 font-semibold text-white">{pkg.tracking}</td>
-                        <td className="py-3 font-sans text-slate-300">{pkg.carrier}</td>
+                        <td className="py-3 font-semibold text-white">{item.tracking}</td>
+                        <td className="py-3 font-sans text-slate-300">{item.carrier}</td>
                         <td className="py-3 font-sans">
-                          <div className="text-slate-200">{pkg.lastHubLocation}</div>
-                          <div className="text-[11px] text-slate-400">Destinataire : {pkg.customerName} ({pkg.wilaya})</div>
+                          <div className="text-slate-200">{item.customerName}</div>
+                          <div className="text-[11px] text-slate-400">{item.wilaya}</div>
                         </td>
-                        <td className="py-3 font-bold text-amber-400">{pkg.daysStuck} jours</td>
-                        <td className="py-3 font-bold text-white">{pkg.declaredValueDzd.toLocaleString()} DZD</td>
-                        <td className="py-3 font-sans">
-                          {pkg.severity === 'CRITICAL_LOST' ? (
-                            <span className="px-2 py-0.5 bg-rose-500/10 text-rose-400 rounded-md font-semibold text-[11px] animate-pulse">
-                              🚨 Présumé Perdu
+                        <td className="py-3 font-sans text-slate-400">{item.returnReason}</td>
+                        <td className="py-3 text-slate-300">{item.negotiatedReturnFee} DZD</td>
+                        <td className="py-3 font-bold text-rose-400">{item.chargedReturnFee} DZD</td>
+                        <td className="py-3">
+                          {item.overchargedFee > 0 ? (
+                            <span className="px-2 py-0.5 bg-rose-500/10 text-rose-400 rounded font-bold">
+                              +{item.overchargedFee} DZD
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded-md font-semibold text-[11px]">
-                              ⏳ Blocage Hub
-                            </span>
+                            <span className="text-slate-500">0 DZD</span>
                           )}
                         </td>
-                        <td className="py-3 text-right font-sans space-x-2">
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(`Urgent Réclamation - Colis ${pkg.tracking} bloqué depuis ${pkg.daysStuck} jours au ${pkg.lastHubLocation}.`);
-                              alert("Message de réclamation copié !");
-                            }}
-                            className="px-2.5 py-1 bg-slate-800 text-amber-300 rounded-lg text-xs font-semibold hover:bg-slate-700"
-                          >
-                            Copier Alerte Agence
-                          </button>
+                        <td className="py-3 text-right font-sans">
+                          {item.callLogVerified ? (
+                            <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[11px] font-semibold">
+                              ✓ Appel Confirmé
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded text-[11px] font-semibold animate-pulse">
+                              ⚠️ Aucun Appel Tracé
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -471,8 +509,20 @@ export default function Dashboard() {
         )}
 
         {/* ======================================================== */}
-        {/* ONGLET 2 : LITIGES & RÉCLAMATIONS                        */}
+        {/* ONGLET 2 : RADAR COLIS FANTÔMES                         */}
         {/* ======================================================== */}
+        {activeTab === 'ghosts' && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-white">Radar Anti-Colis Fantômes & Bloqués en Hub</h2>
+            <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl">
+              <span className="text-xs text-slate-400">Capital Immobilisé</span>
+              <div className="text-3xl font-black text-amber-400 mt-2">{totalStuckCapital.toLocaleString()} DZD</div>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* ONGLET 3 : LITIGES & RÉCLAMATIONS                        */}
         {activeTab === 'dispute' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-white">Générateur de Dossiers de Litige & Réclamations</h2>
@@ -484,7 +534,7 @@ export default function Dashboard() {
         )}
 
         {/* ======================================================== */}
-        {/* ONGLET 3 : IMPORTATION BORDEREAU                         */}
+        {/* ONGLET 4 : IMPORTATION BORDEREAU                         */}
         {activeTab === 'import' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-white">Importateur Universel de Bordereaux</h2>
@@ -493,7 +543,7 @@ export default function Dashboard() {
         )}
 
         {/* ======================================================== */}
-        {/* ONGLET 4 : CRM & COMPTABILITÉ                            */}
+        {/* ONGLET 5 : CRM & COMPTABILITÉ                            */}
         {activeTab === 'crm' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-white">CRM Marchands & Tableau de Bord Comptable</h2>
@@ -501,7 +551,7 @@ export default function Dashboard() {
         )}
 
         {/* ======================================================== */}
-        {/* ONGLET 5 : VUE OPÉRATIONNELLE                            */}
+        {/* ONGLET 6 : VUE OPÉRATIONNELLE                            */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-white">Tableau de bord financier COD</h2>
@@ -509,7 +559,7 @@ export default function Dashboard() {
         )}
 
         {/* ======================================================== */}
-        {/* ONGLET 6 : FILTRAGE IP                                   */}
+        {/* ONGLET 7 : FILTRAGE IP                                   */}
         {activeTab === 'orders' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-white">Filtrage IP & Commandes Risquées</h2>
@@ -517,7 +567,7 @@ export default function Dashboard() {
         )}
 
         {/* ======================================================== */}
-        {/* ONGLET 7 : CONNECTEURS TRANSPORTEURS                     */}
+        {/* ONGLET 8 : CONNECTEURS TRANSPORTEURS                     */}
         {activeTab === 'carriers' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-white">Connecteurs Transporteurs Algérie</h2>
@@ -525,20 +575,36 @@ export default function Dashboard() {
         )}
 
         {/* ======================================================== */}
-        {/* ONGLET 8 : FORFAITS & PAIEMENTS                          */}
+        {/* ONGLET 9 : FORFAITS & PAIEMENTS                          */}
         {activeTab === 'billing' && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-white">Forfaits & Règlements</h2>
+          <div className="space-y-8">
+            <div className="text-center max-w-2xl mx-auto space-y-2">
+              <h2 className="text-3xl font-extrabold text-white">Forfaits & Règlements</h2>
+              <div className="pt-4 flex items-center justify-center gap-3">
+                <span className={`text-xs font-semibold ${billingCycle === 'monthly' ? 'text-white' : 'text-slate-400'}`}>Mensuel</span>
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
+                  className="w-14 h-7 bg-slate-800 rounded-full p-1 transition-colors relative border border-slate-700"
+                >
+                  <div className={`w-5 h-5 bg-emerald-500 rounded-full transition-transform ${billingCycle === 'yearly' ? 'translate-x-7' : 'translate-x-0'}`} />
+                </button>
+                <span className={`text-xs font-semibold flex items-center gap-1.5 ${billingCycle === 'yearly' ? 'text-emerald-400' : 'text-slate-400'}`}>
+                  Annuel (-10%)
+                </span>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div onClick={() => setSelectedPlan('free')} className={`p-6 rounded-2xl border ${selectedPlan === 'free' ? 'border-emerald-500 bg-slate-900' : 'border-slate-800'}`}>
+              <div onClick={() => setSelectedPlan('free')} className={`p-6 rounded-2xl border cursor-pointer ${selectedPlan === 'free' ? 'border-emerald-500 bg-slate-900 ring-2 ring-emerald-500' : 'border-slate-800 bg-slate-900/60'}`}>
                 <h3 className="text-xl font-bold">Pack Free</h3>
                 <div className="text-3xl font-black my-4">0 DZD</div>
               </div>
-              <div onClick={() => setSelectedPlan('business')} className={`p-6 rounded-2xl border ${selectedPlan === 'business' ? 'border-emerald-500 bg-slate-900' : 'border-slate-800'}`}>
+              <div onClick={() => setSelectedPlan('business')} className={`p-6 rounded-2xl border cursor-pointer ${selectedPlan === 'business' ? 'border-emerald-500 bg-slate-900 ring-2 ring-emerald-500' : 'border-slate-800 bg-slate-900/60'}`}>
                 <h3 className="text-xl font-bold">Pack Business</h3>
                 <div className="text-3xl font-black my-4">{getPrice('business').dzd.toLocaleString()} DZD</div>
               </div>
-              <div onClick={() => setSelectedPlan('ultra')} className={`p-6 rounded-2xl border ${selectedPlan === 'ultra' ? 'border-emerald-500 bg-slate-900' : 'border-slate-800'}`}>
+              <div onClick={() => setSelectedPlan('ultra')} className={`p-6 rounded-2xl border cursor-pointer ${selectedPlan === 'ultra' ? 'border-emerald-500 bg-slate-900 ring-2 ring-emerald-500' : 'border-slate-800 bg-slate-900/60'}`}>
                 <h3 className="text-xl font-bold">Pack Ultra Illimité</h3>
                 <div className="text-3xl font-black my-4">{getPrice('ultra').dzd.toLocaleString()} DZD</div>
               </div>
