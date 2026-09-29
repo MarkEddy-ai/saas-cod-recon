@@ -1,0 +1,20 @@
+﻿# MASTER BLUEPRINT - DIRECTIVES DE DÉVELOPPEMENT STRICTES
+
+## 1. RÈGLES TECHNIQUES NON NÉGOCIABLES
+- ZÉRO FLOTTANT MONÉTAIRE : Utiliser EXCLUSIVEMENT des entiers BIGINT en centimes pour tous les montants (ex: 15 000,00 DZD -> 1500000). Aucun type 'number' flottant pour les devises.
+- MULTI-TENANT POSTGRESQL RLS : Chaque table métier doit comporter 'store_id' avec politique RLS active (`app.current_store_id`).
+- AUCUN TYPE 'ANY' : Strict TypeScript activé. Toutes les entrées/sorties d'API doivent être validées via Zod.
+- CLEAN ARCHITECTURE : 
+  * src/app/ : Interface Next.js (App Router, Tailwind CSS).
+  * src/modules/ : Cœur de métier (moteur de risque anti-RTO, réconciliation financière, connecteurs transporteurs).
+  * src/lib/ : Accès base de données Supabase, sécurité, queues.
+
+## 2. MODÈLE DE DONNÉES CIBLE
+- Tables : organizations, stores, orders, parcels, disbursements, disbursement_items, fraud_risk_logs.
+- Calcul critique : variance_cents = net_carrier_cents - expected_amount_cents.
+
+## 3. RÔLES DES AGENTS À MOBILISER
+- Agent 08 (API Contracts) : Schémas de validation Zod.
+- Agent 11 (Anti-RTO Scorer) : Évaluation du risque de fraude par commande (0 à 100).
+- Agent 12 (Reconciliation Engine) : Matching automatisé colis/bordereau et détection d'écarts de caisse.
+- Agent 14 & 15 (UI & Dashboard) : Tableaux de bord dynamiques, import CSV réel et visualisation des anomalies.
