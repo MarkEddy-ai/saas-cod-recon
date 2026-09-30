@@ -81,15 +81,14 @@ export default function Dashboard() {
   >('billing');
 
   const [copySuccess, setCopySuccess] = useState(false);
+  const [copyEmailSuccess, setCopyEmailSuccess] = useState(false);
 
-  // ENTITÉ PROFESSIONNELLE ET COORDONNÉES RÉELLES D'ENCAISSEMENT
   const corporateBillingEntity = "COD Reconciliation DZ — Service Comptabilité & Licences";
   const billingRip = "00799999000232882074";
   const supportWhatsAppDisplay = "0699 00 00 82";
   const supportWhatsAppNumber = "213699000082";
   const supportEmail = "weekyfy@gmail.com";
 
-  // SÉLECTEUR CYCLE DE FACTURATION
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'business' | 'ultra'>('business');
 
@@ -124,6 +123,22 @@ export default function Dashboard() {
     navigator.clipboard.writeText(billingRip);
     setCopySuccess(true);
     setTimeout(() => setCopySuccess(false), 3000);
+  };
+
+  // Gestion robuste de l'envoi email
+  const handleOpenEmail = () => {
+    const subject = `Preuve de virement BaridiMob - ${plans[selectedPlan].name}`;
+    const body = `Bonjour,\n\nJe viens d'effectuer le virement BaridiMob de ${getPrice(selectedPlan).dzd.toLocaleString()} DZD pour activer le ${plans[selectedPlan].name} (${billingCycle === 'yearly' ? 'Annuel -10%' : 'Mensuel'}).\nVeuillez trouver ma quittance en pièce jointe.`;
+    
+    // Ouvre Gmail dans un nouvel onglet si le client web est utilisé
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${supportEmail}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(gmailUrl, '_blank');
+  };
+
+  const handleCopyEmail = () => {
+    navigator.clipboard.writeText(supportEmail);
+    setCopyEmailSuccess(true);
+    setTimeout(() => setCopyEmailSuccess(false), 3000);
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -745,7 +760,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET FACTURATION (AVEC WHATSAPP DIRECT 0699000082 ET EMAIL WEEKYFY@GMAIL.COM) */}
+        {/* ONGLET FACTURATION AVEC GESTION MULTI-CANAL EMAIL PARFAITE */}
         {activeTab === 'billing' && (
           <div className="space-y-8 max-w-5xl mx-auto pt-4">
             <div className="text-center max-w-2xl mx-auto space-y-2">
@@ -958,7 +973,7 @@ export default function Dashboard() {
                       <span>Prendre en Photo</span>
                     </button>
 
-                    {/* LIEN DIRECT WHATSAPP : 0699000082 */}
+                    {/* LIEN DIRECT WHATSAPP */}
                     <a
                       href={`https://wa.me/${supportWhatsAppNumber}?text=${encodeURIComponent(
                         `Bonjour, j'ai effectué le virement BaridiMob de ${getPrice(selectedPlan).dzd.toLocaleString()} DZD pour le ${plans[selectedPlan].name} (${billingCycle === 'yearly' ? 'Formule Annuelle -10%' : 'Formule Mensuelle'}). Voici la capture d'écran de ma quittance pour activation de ma licence.`
@@ -971,18 +986,30 @@ export default function Dashboard() {
                       <span>Envoyer sur WhatsApp</span>
                     </a>
 
-                    {/* LIEN DIRECT EMAIL : weekyfy@gmail.com */}
-                    <a
-                      href={`mailto:${supportEmail}?subject=${encodeURIComponent(
-                        `Preuve de virement BaridiMob - ${plans[selectedPlan].name}`
-                      )}&body=${encodeURIComponent(
-                        `Bonjour,\n\nJe viens d'effectuer le virement BaridiMob de ${getPrice(selectedPlan).dzd.toLocaleString()} DZD pour activer le ${plans[selectedPlan].name} (${billingCycle === 'yearly' ? 'Annuel' : 'Mensuel'}).\nVeuillez trouver ma quittance en pièce jointe.`
-                      )}`}
-                      className="p-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl text-xs flex flex-col items-center justify-center gap-1.5 transition border border-slate-700"
+                    {/* BOUTON EMAIL INTELLIGENT (GMAIL WEB DIRECT + COPIE DE SECOURS) */}
+                    <button
+                      type="button"
+                      onClick={handleOpenEmail}
+                      className="p-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl text-xs flex flex-col items-center justify-center gap-1.5 transition border border-slate-700 relative group"
                     >
                       <span className="text-lg">✉️</span>
-                      <span>Envoyer par Email</span>
-                    </a>
+                      <span>Ouvrir Gmail Direct</span>
+                      <span className="text-[9px] text-slate-400 font-mono">weekyfy@gmail.com</span>
+                    </button>
+                  </div>
+
+                  {/* BANDEAU ALTERNATIF : COPIER L'ADRESSE EMAIL EN 1 CLIC */}
+                  <div className="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800/80 text-xs">
+                    <span className="text-slate-400">
+                      Vous préférez envoyer depuis une autre application ?
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyEmail}
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 font-mono font-bold rounded-lg border border-slate-700 transition"
+                    >
+                      {copyEmailSuccess ? '✓ Email Copié !' : '📋 Copier weekyfy@gmail.com'}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1597,7 +1624,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET 10 : SUPPORT (AVEC 0699000082 ET WEEKYFY@GMAIL.COM) */}
+        {/* ONGLET SUPPORT */}
         {activeTab === 'contact' && (
           <div className="space-y-6 max-w-3xl mx-auto pt-2">
             <h2 className="text-2xl font-black text-white">Support & Assistance</h2>
