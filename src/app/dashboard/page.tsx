@@ -77,7 +77,7 @@ interface OrderFraudItem {
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<
-    'import_csv' | 'wilayas' | 'ghosts' | 'rto_audit' | 'dispute' | 'blacklist' | 'orders_fraud' | 'billing' | 'connectors' | 'api_settings' | 'contact'
+    'import_csv' | 'orders_fraud' | 'wilayas' | 'ghosts' | 'rto_audit' | 'dispute' | 'blacklist' | 'billing' | 'connectors' | 'api_settings' | 'contact'
   >('import_csv');
 
   const [copySuccess, setCopySuccess] = useState(false);
@@ -291,6 +291,45 @@ export default function Dashboard() {
     alert(`Dossier de réclamation perte/vol transmis pour le colis ${tracking} !`);
   };
 
+  // COMMANDES EN TEMPS RÉEL & DÉTECTION FRAUDE IP / VPN (MODULE 4)
+  const [fraudOrders, setFraudOrders] = useState<OrderFraudItem[]>([
+    { orderId: "CMD-9941", customerName: "Karim Brahimi (Alger)", phone: "0770123984", ipAddress: "105.101.42.18 (Mobilis)", isVpn: false, score: 95, status: "APPROUVE" },
+    { orderId: "CMD-9942", customerName: "Spam Bot / Fake", phone: "0661234567", ipAddress: "185.220.101.5 (Tor/VPN)", isVpn: true, score: 15, status: "BLOQUE" },
+    { orderId: "CMD-9943", customerName: "Yacine M. (Oran)", phone: "0550482914", ipAddress: "41.107.82.90 (Djezzy)", isVpn: false, score: 68, status: "SUSPECT" }
+  ]);
+
+  // Simulation test d'envoi webhook
+  const handleSimulateWebhook = async (type: 'legit' | 'fraud') => {
+    const payload = type === 'legit' ? {
+      order_id: `CMD-${Math.floor(1000 + Math.random() * 9000)}`,
+      customer_name: "Amina Belkacem",
+      phone: "0552345678",
+      ip: "105.106.12.44",
+      is_vpn: false
+    } : {
+      order_id: `CMD-${Math.floor(1000 + Math.random() * 9000)}`,
+      customer_name: "Proxy User DZ",
+      phone: "0000000000",
+      ip: "194.26.29.112",
+      is_vpn: true
+    };
+
+    try {
+      const res = await fetch('/api/orders/webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success && data.order) {
+        setFraudOrders(prev => [data.order, ...prev]);
+        alert(`Commande ${data.order.orderId} reçue via Webhook ! Statut: ${data.order.status}`);
+      }
+    } catch (e) {
+      alert("Erreur webhook");
+    }
+  };
+
   // Score Acheteur Anti-RTO
   const [searchPhone, setSearchPhone] = useState('');
   const [searchResult, setSearchResult] = useState<BuyerReputation | null>(null);
@@ -387,13 +426,6 @@ export default function Dashboard() {
     { id: "LIT-2026-003", tracking: "yal_dz_9981023", carrier: "Yalidine Express", customerName: "Destinataire Ghardaïa (47)", amountClaimedDzd: 18500, issue: "Colis bloqué 12 jours au hub régional", status: "OUVERT", dateAdded: "25/09/2026" }
   ]);
 
-  // Données Fraude IP
-  const [fraudOrders] = useState<OrderFraudItem[]>([
-    { orderId: "CMD-9941", customerName: "Client Alger Centre", phone: "0770123984", ipAddress: "105.101.42.18", isVpn: false, score: 95, status: "APPROUVE" },
-    { orderId: "CMD-9942", customerName: "Tentative Suspecte", phone: "0661234567", ipAddress: "185.220.101.5", isVpn: true, score: 10, status: "BLOQUE" },
-    { orderId: "CMD-9943", customerName: "Client Oran", phone: "0550482914", ipAddress: "41.107.82.90", isVpn: false, score: 62, status: "SUSPECT" }
-  ]);
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans">
       {/* SIDEBAR ABONNÉ */}
@@ -433,6 +465,16 @@ export default function Dashboard() {
             >
               <span className="flex items-center gap-2">📁 Import Quittances (CSV/Excel)</span>
               <span className="px-1.5 py-0.5 text-[9px] bg-emerald-500 text-slate-950 rounded font-bold">Audit</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('orders_fraud')}
+              className={`w-full text-left px-3 py-2.5 rounded-xl font-semibold transition flex items-center justify-between ${
+                activeTab === 'orders_fraud' ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30' : 'text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              <span className="flex items-center gap-2">⚡ Commandes & Filtre IP</span>
+              <span className="px-1.5 py-0.5 text-[9px] bg-indigo-500 text-white rounded font-bold">Live</span>
             </button>
 
             <button
@@ -478,15 +520,6 @@ export default function Dashboard() {
             </button>
 
             <button
-              onClick={() => setActiveTab('orders_fraud')}
-              className={`w-full text-left px-3 py-2.5 rounded-xl font-semibold transition flex items-center justify-between ${
-                activeTab === 'orders_fraud' ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30' : 'text-slate-300 hover:bg-slate-800'
-              }`}
-            >
-              <span className="flex items-center gap-2">📦 Commandes & Filtre IP</span>
-            </button>
-
-            <button
               onClick={() => setActiveTab('billing')}
               className={`w-full text-left px-3 py-2.5 rounded-xl font-semibold transition flex items-center justify-between ${
                 activeTab === 'billing' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-800'
@@ -496,7 +529,7 @@ export default function Dashboard() {
               <span className="px-1.5 py-0.5 text-[9px] bg-emerald-500/20 text-emerald-300 rounded font-bold">BaridiMob</span>
             </button>
 
-            <div className="pt-3 px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Intégrations</div>
+            <div className="pt-3 px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Intégrations & Webhooks</div>
 
             <button
               onClick={() => setActiveTab('connectors')}
@@ -513,7 +546,7 @@ export default function Dashboard() {
                 activeTab === 'api_settings' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-300 hover:bg-slate-800'
               }`}
             >
-              <span className="flex items-center gap-2">⚙️ Clés API & MCP</span>
+              <span className="flex items-center gap-2">🔌 Shopify / YouCan / MCP</span>
             </button>
 
             <button
@@ -664,7 +697,120 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET 2 : P&L WILAYAS & RECOMMANDATIONS META ADS (MODULE 3) */}
+        {/* ONGLET 2 : COMMANDES EN DIRECT & FILTRE IP / VPN (MODULE 4) */}
+        {activeTab === 'orders_fraud' && (
+          <div className="space-y-6 max-w-6xl mx-auto">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <span className="text-xs bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                  Protection Checkout Temps Réel
+                </span>
+                <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
+                  Commandes Entrantes & Radar Anti-Fraude IP
+                </h1>
+                <p className="text-slate-400 text-xs mt-1">
+                  Filtrage automatique des commandes issues de VPN étrangers, numéros fictifs et faux acheteurs.
+                </p>
+              </div>
+
+              {/* BOUTONS DE TEST RAPIDE */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleSimulateWebhook('legit')}
+                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3.5 py-2 rounded-xl text-xs transition shadow"
+                >
+                  + Simuler Commande Saine (Alger)
+                </button>
+                <button
+                  onClick={() => handleSimulateWebhook('fraud')}
+                  className="bg-rose-600 hover:bg-rose-500 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition shadow"
+                >
+                  🚨 Simuler Attaque VPN
+                </button>
+              </div>
+            </div>
+
+            {/* CARTES STATS */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
+                <span className="text-xs text-slate-400">Commandes Saines Approuvées</span>
+                <div className="text-3xl font-black text-emerald-400 mt-1">
+                  {fraudOrders.filter(o => o.status === 'APPROUVE').length} commandes
+                </div>
+                <span className="text-[11px] text-emerald-300">Prêtes pour expédition immédiate</span>
+              </div>
+              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
+                <span className="text-xs text-slate-400">Commandes Bloquées (VPN / Fraud)</span>
+                <div className="text-3xl font-black text-rose-400 mt-1">
+                  {fraudOrders.filter(o => o.status === 'BLOQUE').length} bloquées
+                </div>
+                <span className="text-[11px] text-rose-300">Économie de frais d'envoi et de retour</span>
+              </div>
+              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
+                <span className="text-xs text-slate-400">Endpoint Webhook Actif</span>
+                <div className="text-xs font-mono text-cyan-400 mt-2 truncate bg-slate-950 p-2 rounded-lg border border-slate-800 select-all">
+                  /api/orders/webhook
+                </div>
+                <span className="text-[10px] text-slate-500">Prêt pour Shopify / YouCan / WooCommerce</span>
+              </div>
+            </div>
+
+            {/* TABLEAU DES COMMANDES EN DIRECT */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
+                  <tr>
+                    <th className="p-4">N° Commande</th>
+                    <th className="p-4">Client</th>
+                    <th className="p-4">Numéro Téléphone</th>
+                    <th className="p-4">Adresse IP Client</th>
+                    <th className="p-4">Détection VPN</th>
+                    <th className="p-4">Score Confiance</th>
+                    <th className="p-4 text-right">Décision Système</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 font-sans">
+                  {fraudOrders.map((ord, idx) => (
+                    <tr key={idx} className="hover:bg-slate-800/30">
+                      <td className="p-4 font-mono font-bold text-white">{ord.orderId}</td>
+                      <td className="p-4 text-slate-200 font-medium">{ord.customerName}</td>
+                      <td className="p-4 font-mono text-slate-300">{ord.phone}</td>
+                      <td className="p-4 font-mono text-slate-400">{ord.ipAddress}</td>
+                      <td className="p-4">
+                        {ord.isVpn ? (
+                          <span className="px-2 py-0.5 bg-rose-500/20 text-rose-400 font-bold rounded border border-rose-500/40">
+                            🚨 VPN / Datacenter Détecté
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 font-bold rounded border border-emerald-500/40">
+                            ✓ IP Résidentielle DZ
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4 font-mono font-black text-sm">
+                        <span className={ord.score >= 70 ? 'text-emerald-400' : ord.score >= 40 ? 'text-amber-400' : 'text-rose-500'}>
+                          {ord.score}/100
+                        </span>
+                      </td>
+                      <td className="p-4 text-right">
+                        <span className={`px-2.5 py-1 rounded text-[10px] font-black ${
+                          ord.status === 'APPROUVE' ? 'bg-emerald-500/20 text-emerald-400' :
+                          ord.status === 'SUSPECT' ? 'bg-amber-500/20 text-amber-400' : 'bg-rose-500/20 text-rose-400'
+                        }`}>
+                          {ord.status === 'APPROUVE' && '✓ VALIDÉE'}
+                          {ord.status === 'SUSPECT' && '⚠️ ENQUÊTE APPEL'}
+                          {ord.status === 'BLOQUE' && '⛔ REJETÉE'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ONGLET 3 : P&L WILAYAS & RECOMMANDATIONS META ADS */}
         {activeTab === 'wilayas' && (
           <div className="space-y-6 max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -680,7 +826,6 @@ export default function Dashboard() {
                 </p>
               </div>
 
-              {/* FILTRES RAPIDES */}
               <div className="flex gap-2">
                 <button
                   onClick={() => setWilayaFilter('ALL')}
@@ -709,7 +854,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* SYNTHÈSE GLOBALE */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
                 <span className="text-xs text-slate-400">Wilayas Hautement Rentables</span>
@@ -719,7 +863,7 @@ export default function Dashboard() {
                 <span className="text-[11px] text-emerald-300">Taux de livraison supérieur à 85%</span>
               </div>
               <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
-                <span className="text-xs text-slate-400">Wilayas Déficitaires (Brûlent le Budget)</span>
+                <span className="text-xs text-slate-400">Wilayas Déficitaires</span>
                 <div className="text-3xl font-black text-rose-400 mt-1">
                   {wilayaStats.filter(w => w.recommendation === 'EXCLUDE_ADS').length} Wilayas
                 </div>
@@ -732,7 +876,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* TABLEAU P&L DETAILLÉ */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
@@ -780,7 +923,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET 3 : RADAR DES COLIS BLOQUÉS EN HUBS (+7 JOURS) (MODULE 3) */}
+        {/* ONGLET 4 : RADAR DES COLIS BLOQUÉS EN HUBS */}
         {activeTab === 'ghosts' && (
           <div className="space-y-6 max-w-6xl mx-auto">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -824,9 +967,7 @@ export default function Dashboard() {
                       <td className="p-4 text-slate-300">{g.carrier}</td>
                       <td className="p-4 text-slate-200">{g.customerName} ({g.wilaya})</td>
                       <td className="p-4 font-medium text-amber-400">{g.hubLocation}</td>
-                      <td className="p-4 font-mono font-black text-rose-400">
-                        {g.daysStuck} jours
-                      </td>
+                      <td className="p-4 font-mono font-black text-rose-400">{g.daysStuck} jours</td>
                       <td className="p-4 font-mono font-bold text-white">{g.codAmountDzd.toLocaleString()} DZD</td>
                       <td className="p-4 text-right">
                         {g.status === 'IMMOBILISE' ? (
@@ -844,6 +985,54 @@ export default function Dashboard() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* ONGLET INTÉGRATIONS SHOPIFY / YOUCAN / MCP */}
+        {activeTab === 'api_settings' && (
+          <div className="space-y-6 max-w-5xl mx-auto">
+            <div>
+              <span className="text-xs bg-cyan-500/20 text-cyan-300 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                Connecteurs E-commerce & Webhooks
+              </span>
+              <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
+                Intégration YouCan, Shopify & WooCommerce
+              </h1>
+              <p className="text-slate-400 text-xs mt-1">
+                Copiez l'URL de votre Webhook pour recevoir et filtrer vos commandes en direct.
+              </p>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+              <span className="text-xs text-slate-400 font-bold">URL Officielle de votre Webhook (Méthode POST) :</span>
+              <div className="flex items-center gap-3">
+                <input
+                  type="text"
+                  readOnly
+                  value="https://saas-cod-recon-2026.vercel.app/api/orders/webhook"
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs font-mono text-emerald-400 select-all"
+                />
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText("https://saas-cod-recon-2026.vercel.app/api/orders/webhook");
+                    alert("URL Webhook copiée !");
+                  }}
+                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-3 rounded-xl text-xs transition"
+                >
+                  Copier l'URL
+                </button>
+              </div>
+
+              <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+                <div className="text-xs font-bold text-white">Guide d'installation express en 1 minute :</div>
+                <p className="text-[11px] text-slate-400">
+                  <strong>Sur YouCan :</strong> Allez dans <em>Paramètres</em> &gt; <em>Webhooks</em> &gt; Ajoutez un webhook sur l'événement <strong>"Order Created"</strong> et collez l'URL ci-dessus.
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  <strong>Sur Shopify :</strong> Rendez-vous dans <em>Paramètres</em> &gt; <em>Notifications</em> &gt; <em>Webhooks</em> &gt; Événement <strong>"Création de commande"</strong> au format JSON.
+                </p>
+              </div>
             </div>
           </div>
         )}
@@ -973,53 +1162,6 @@ export default function Dashboard() {
                 </button>
               </form>
               {reportingStatus && <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs rounded-xl">{reportingStatus}</div>}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'orders_fraud' && (
-          <div className="space-y-6 max-w-5xl mx-auto">
-            <h2 className="text-2xl font-black text-white">Commandes & Détection Anti-Fraude IP</h2>
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
-                  <tr>
-                    <th className="p-4">N° Commande</th>
-                    <th className="p-4">Identifiant Client</th>
-                    <th className="p-4">Téléphone</th>
-                    <th className="p-4">Adresse IP</th>
-                    <th className="p-4">VPN / Proxy</th>
-                    <th className="p-4">Score</th>
-                    <th className="p-4 text-right">Statut</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-sans">
-                  {fraudOrders.map((ord, idx) => (
-                    <tr key={idx} className="hover:bg-slate-800/30">
-                      <td className="p-4 font-mono font-bold text-white">{ord.orderId}</td>
-                      <td className="p-4 text-slate-200">{ord.customerName}</td>
-                      <td className="p-4 font-mono text-slate-300">{ord.phone}</td>
-                      <td className="p-4 font-mono text-slate-400">{ord.ipAddress}</td>
-                      <td className="p-4">
-                        {ord.isVpn ? (
-                          <span className="px-2 py-0.5 bg-rose-500/20 text-rose-400 font-bold rounded">VPN Détecté</span>
-                        ) : (
-                          <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 font-bold rounded">IP DZ Réelle</span>
-                        )}
-                      </td>
-                      <td className="p-4 font-black">{ord.score}/100</td>
-                      <td className="p-4 text-right">
-                        <span className={`px-2 py-1 rounded text-[10px] font-black ${
-                          ord.status === 'APPROUVE' ? 'bg-emerald-500/20 text-emerald-400' :
-                          ord.status === 'SUSPECT' ? 'bg-amber-500/20 text-amber-400' : 'bg-rose-500/20 text-rose-400'
-                        }`}>
-                          {ord.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </div>
         )}
@@ -1240,7 +1382,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* CONNECTEURS & API */}
         {activeTab === 'connectors' && (
           <div className="space-y-6 max-w-5xl mx-auto">
             <h2 className="text-2xl font-black text-white">Connecteurs Transporteurs Algérie</h2>
@@ -1254,22 +1395,6 @@ export default function Dashboard() {
                 <span className="font-bold text-white text-base">ZR Express API</span>
                 <input type="text" defaultValue="zr_key_live_449102" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono" />
                 <button onClick={() => alert("Synchronisation ZR Express réussie !")} className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 rounded-xl text-xs transition">Synchroniser</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'api_settings' && (
-          <div className="space-y-6 max-w-5xl mx-auto">
-            <h2 className="text-2xl font-black text-white">Intégrations E-commerce & MCP</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-3">
-                <span className="font-bold text-white text-sm">Clé API Marchand</span>
-                <input type="text" readOnly value="recon_live_sec_994827103984" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-emerald-400 font-mono" />
-              </div>
-              <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-3">
-                <span className="font-bold text-white text-sm">Point de Connexion MCP</span>
-                <input type="text" readOnly value="https://saas-cod-recon-algerie.vercel.app/api/mcp" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-cyan-400 font-mono" />
               </div>
             </div>
           </div>
