@@ -594,8 +594,9 @@ export default function Dashboard() {
       </aside>
 
       <main className="flex-1 p-6 md:p-8 overflow-y-auto">
+        {/* ONGLET 1 : IMPORTATION CSV */}
         {activeTab === 'import_csv' && (
-          <div className="space-y-6 max-w-6xl mx-auto">
+          <div className="space-y-6 max-w-6xl mx-auto pt-2">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div>
                 <span className="text-xs bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
@@ -722,8 +723,450 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* ONGLET DOSSIERS DE LITIGES (CORRECTION BUG 1 : MARGE SUPÉRIEURE ET DÉBORDEMENT BOUTON) */}
+        {activeTab === 'dispute' && (
+          <div className="space-y-6 max-w-5xl mx-auto pt-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800/80 pb-5">
+              <div>
+                <span className="text-xs bg-rose-500/20 text-rose-400 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                  Contentieux Transporteurs
+                </span>
+                <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
+                  Dossiers de Litiges Transporteurs
+                </h1>
+                <p className="text-slate-400 text-xs mt-1">
+                  Récapitulatif des dossiers ouverts pour contestation officielle et retenue sur quittance.
+                </p>
+              </div>
+              <button
+                onClick={exportDisputeCsv}
+                className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center gap-2"
+              >
+                <span>📑</span> Exporter Bordereau (.CSV)
+              </button>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
+                  <tr>
+                    <th className="p-4">Dossier</th>
+                    <th className="p-4">Tracking</th>
+                    <th className="p-4">Transporteur</th>
+                    <th className="p-4">Motif</th>
+                    <th className="p-4">Montant Réclamé</th>
+                    <th className="p-4 text-right">Statut</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 font-sans">
+                  {disputes.map((d, idx) => (
+                    <tr key={idx} className="hover:bg-slate-800/30">
+                      <td className="p-4 font-mono font-bold text-white">{d.id}</td>
+                      <td className="p-4 font-mono text-emerald-400">{d.tracking}</td>
+                      <td className="p-4 text-slate-300">{d.carrier}</td>
+                      <td className="p-4 text-slate-300">{d.issue}</td>
+                      <td className="p-4 font-bold text-rose-400">+{d.amountClaimedDzd} DZD</td>
+                      <td className="p-4 text-right font-black text-amber-400">
+                        <span className="px-2.5 py-1 bg-amber-500/20 text-amber-400 rounded-full text-[10px]">
+                          {d.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ONGLET SCORE ACHETEUR & BLACKLIST (CORRECTION BUG 1 : MARGE SUPÉRIEURE) */}
+        {activeTab === 'blacklist' && (
+          <div className="space-y-8 max-w-5xl mx-auto pt-4">
+            <div className="border-b border-slate-800/80 pb-5">
+              <span className="text-xs bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                Répertoire Partagé Algérie
+              </span>
+              <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
+                Score Acheteur & Blacklist Algérie Partagée
+              </h1>
+              <p className="text-slate-400 text-xs mt-1">
+                Auditez tout numéro client avant validation pour éliminer les retours coûteux.
+              </p>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+              <form onSubmit={handleSearchBuyer} className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  placeholder="Ex : 0550123456 ou 0770987654"
+                  value={searchPhone}
+                  onChange={(e) => setSearchPhone(e.target.value)}
+                  className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white font-mono text-base focus:border-amber-400 focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={isSearchingPhone}
+                  className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-6 py-3 rounded-xl transition"
+                >
+                  {isSearchingPhone ? 'Analyse...' : 'Auditer le Numéro'}
+                </button>
+              </form>
+
+              {hasSearched && (
+                <div className="pt-4 border-t border-slate-800">
+                  {searchResult ? (
+                    <div className="p-5 rounded-xl border bg-slate-950/70 border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6">
+                      <div className="space-y-2 text-center md:text-left">
+                        <div className="flex items-center gap-3">
+                          <span className="font-mono text-xl font-bold text-white">{searchResult.phone_number}</span>
+                          <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${
+                            searchResult.risk_level === 'LOW' ? 'bg-emerald-500/20 text-emerald-400' :
+                            searchResult.risk_level === 'MEDIUM' ? 'bg-amber-500/20 text-amber-400' :
+                            'bg-rose-500/20 text-rose-400 animate-pulse'
+                          }`}>
+                            {searchResult.risk_level === 'LOW' && '✓ CLIENT FIABLE'}
+                            {searchResult.risk_level === 'MEDIUM' && '⚠️ RISQUE MOYEN'}
+                            {searchResult.risk_level === 'HIGH' && '🚨 RISQUE ÉLEVÉ'}
+                            {searchResult.risk_level === 'BLACKLISTED' && '⛔ LISTE NOIRE'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400">
+                          Historique : <strong className="text-white">{searchResult.delivered_orders}</strong> livrées sur <strong className="text-white">{searchResult.total_orders}</strong> commandes.
+                        </p>
+                      </div>
+                      <div className="text-center p-4 bg-slate-900 border border-slate-800 rounded-xl min-w-[130px]">
+                        <div className="text-4xl font-black text-amber-400">{searchResult.trust_score}/100</div>
+                        <span className="text-[10px] text-slate-400 uppercase font-semibold">Indice de Confiance</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center text-slate-400 text-sm">
+                      ✨ Numéro jamais signalé. Aucun antécédent négatif dans la base partagée.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4">
+              <h3 className="text-base font-bold text-white">📢 Signaler un Acheteur Fantôme ou Refus Abusif</h3>
+              <form onSubmit={handleReportBuyer} className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <input
+                  type="text"
+                  required
+                  placeholder="Numéro (0661...)"
+                  value={reportPhone}
+                  onChange={(e) => setReportPhone(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white font-mono"
+                />
+                <select
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white"
+                >
+                  <option value="Client Injoignable">Client Injoignable</option>
+                  <option value="Refus à l'ouverture">Refus à l'ouverture du colis</option>
+                  <option value="Numéro erroné / Fake">Faux numéro / Numéro erroné</option>
+                  <option value="Report abusif / Annulation">Report abusif puis annulation</option>
+                </select>
+                <button type="submit" className="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition">
+                  Ajouter au Répertoire Partagé
+                </button>
+              </form>
+              {reportingStatus && <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs rounded-xl">{reportingStatus}</div>}
+            </div>
+          </div>
+        )}
+
+        {/* AUTRES ONGLETS STABLES */}
+        {activeTab === 'orders_fraud' && (
+          <div className="space-y-6 max-w-6xl mx-auto pt-2">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <span className="text-xs bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                  Protection Checkout Temps Réel
+                </span>
+                <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
+                  Commandes Entrantes & Radar Anti-Fraude IP
+                </h1>
+                <p className="text-slate-400 text-xs mt-1">
+                  Filtrage automatique des commandes issues de VPN étrangers, numéros fictifs et faux acheteurs.
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleSimulateWebhook('legit')}
+                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3.5 py-2 rounded-xl text-xs transition shadow"
+                >
+                  + Simuler Commande Saine (Alger)
+                </button>
+                <button
+                  onClick={() => handleSimulateWebhook('fraud')}
+                  className="bg-rose-600 hover:bg-rose-500 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition shadow"
+                >
+                  🚨 Simuler Attaque VPN
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
+                <span className="text-xs text-slate-400">Commandes Saines Approuvées</span>
+                <div className="text-3xl font-black text-emerald-400 mt-1">
+                  {fraudOrders.filter(o => o.status === 'APPROUVE').length} commandes
+                </div>
+                <span className="text-[11px] text-emerald-300">Prêtes pour expédition immédiate</span>
+              </div>
+              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
+                <span className="text-xs text-slate-400">Commandes Bloquées (VPN / Fraud)</span>
+                <div className="text-3xl font-black text-rose-400 mt-1">
+                  {fraudOrders.filter(o => o.status === 'BLOQUE').length} bloquées
+                </div>
+                <span className="text-[11px] text-rose-300">Économie de frais d'envoi et de retour</span>
+              </div>
+              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
+                <span className="text-xs text-slate-400">Endpoint Webhook Actif</span>
+                <div className="text-xs font-mono text-cyan-400 mt-2 truncate bg-slate-950 p-2 rounded-lg border border-slate-800 select-all">
+                  /api/orders/webhook
+                </div>
+                <span className="text-[10px] text-slate-500">Prêt pour Shopify / YouCan / WooCommerce</span>
+              </div>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
+                  <tr>
+                    <th className="p-4">N° Commande</th>
+                    <th className="p-4">Client</th>
+                    <th className="p-4">Numéro Téléphone</th>
+                    <th className="p-4">Adresse IP Client</th>
+                    <th className="p-4">Détection VPN</th>
+                    <th className="p-4">Score Confiance</th>
+                    <th className="p-4 text-right">Décision Système</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 font-sans">
+                  {fraudOrders.map((ord, idx) => (
+                    <tr key={idx} className="hover:bg-slate-800/30">
+                      <td className="p-4 font-mono font-bold text-white">{ord.orderId}</td>
+                      <td className="p-4 text-slate-200 font-medium">{ord.customerName}</td>
+                      <td className="p-4 font-mono text-slate-300">{ord.phone}</td>
+                      <td className="p-4 font-mono text-slate-400">{ord.ipAddress}</td>
+                      <td className="p-4">
+                        {ord.isVpn ? (
+                          <span className="px-2 py-0.5 bg-rose-500/20 text-rose-400 font-bold rounded border border-rose-500/40">
+                            🚨 VPN / Datacenter Détecté
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 font-bold rounded border border-emerald-500/40">
+                            ✓ IP Résidentielle DZ
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4 font-mono font-black text-sm">
+                        <span className={ord.score >= 70 ? 'text-emerald-400' : ord.score >= 40 ? 'text-amber-400' : 'text-rose-500'}>
+                          {ord.score}/100
+                        </span>
+                      </td>
+                      <td className="p-4 text-right">
+                        <span className={`px-2.5 py-1 rounded text-[10px] font-black ${
+                          ord.status === 'APPROUVE' ? 'bg-emerald-500/20 text-emerald-400' :
+                          ord.status === 'SUSPECT' ? 'bg-amber-500/20 text-amber-400' : 'bg-rose-500/20 text-rose-400'
+                        }`}>
+                          {ord.status === 'APPROUVE' && '✓ VALIDÉE'}
+                          {ord.status === 'SUSPECT' && '⚠️ ENQUÊTE APPEL'}
+                          {ord.status === 'BLOQUE' && '⛔ REJETÉE'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'wilayas' && (
+          <div className="space-y-6 max-w-6xl mx-auto pt-2">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <span className="text-xs bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                  Moteur P&L & Arbitrage Publicitaire
+                </span>
+                <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
+                  Rentabilité Nette par Wilaya & Décisions Meta Ads
+                </h1>
+                <p className="text-slate-400 text-xs mt-1">
+                  Chiffre d'affaires encaissé vs Coûts réels de retours pour optimiser vos budgets publicitaires.
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setWilayaFilter('ALL')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                    wilayaFilter === 'ALL' ? 'bg-slate-800 text-white border border-slate-700' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Toutes
+                </button>
+                <button
+                  onClick={() => setWilayaFilter('SCALE')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                    wilayaFilter === 'SCALE' ? 'bg-emerald-500 text-slate-950 font-black' : 'text-emerald-400 hover:bg-emerald-500/10'
+                  }`}
+                >
+                  🚀 À Scaler Meta Ads
+                </button>
+                <button
+                  onClick={() => setWilayaFilter('EXCLUDE')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                    wilayaFilter === 'EXCLUDE' ? 'bg-rose-600 text-white font-black' : 'text-rose-400 hover:bg-rose-500/10'
+                  }`}
+                >
+                  ⛔ À Exclure Meta Ads
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
+                <span className="text-xs text-slate-400">Wilayas Hautement Rentables</span>
+                <div className="text-3xl font-black text-emerald-400 mt-1">
+                  {wilayaStats.filter(w => w.recommendation === 'SCALE_ADS').length} Wilayas
+                </div>
+                <span className="text-[11px] text-emerald-300">Taux de livraison supérieur à 85%</span>
+              </div>
+              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
+                <span className="text-xs text-slate-400">Wilayas Déficitaires</span>
+                <div className="text-3xl font-black text-rose-400 mt-1">
+                  {wilayaStats.filter(w => w.recommendation === 'EXCLUDE_ADS').length} Wilayas
+                </div>
+                <span className="text-[11px] text-rose-300">Pertes de retours supérieures aux bénéfices</span>
+              </div>
+              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
+                <span className="text-xs text-slate-400">Économie publicitaire mensuelle estimée</span>
+                <div className="text-3xl font-black text-white mt-1">+65 000 DZD</div>
+                <span className="text-[11px] text-slate-400">En excluant les wilayas à risque de vos Adsets</span>
+              </div>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
+                  <tr>
+                    <th className="p-4">Wilaya</th>
+                    <th className="p-4">Expédiés</th>
+                    <th className="p-4">Taux Livré</th>
+                    <th className="p-4">CA Encaissé</th>
+                    <th className="p-4">Pertes Retours</th>
+                    <th className="p-4">Marge Nette Réelle</th>
+                    <th className="p-4 text-right">Décision Meta Ads</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 font-sans">
+                  {filteredWilayas.map((w, idx) => (
+                    <tr key={idx} className="hover:bg-slate-800/30">
+                      <td className="p-4 font-bold text-white">{w.code} - {w.name}</td>
+                      <td className="p-4 font-mono text-slate-300">{w.totalShipped} colis</td>
+                      <td className="p-4 font-mono font-bold text-emerald-400">{w.deliveredRate}%</td>
+                      <td className="p-4 font-mono text-slate-200">{w.grossSalesDzd.toLocaleString()} DZD</td>
+                      <td className="p-4 font-mono text-rose-400 font-bold">-{w.rtoLossDzd.toLocaleString()} DZD</td>
+                      <td className="p-4 font-mono font-black">
+                        <span className={w.netMarginDzd > 0 ? 'text-emerald-400' : 'text-rose-500'}>
+                          {w.netMarginDzd > 0 ? `+${w.netMarginDzd.toLocaleString()} DZD` : `${w.netMarginDzd.toLocaleString()} DZD`}
+                        </span>
+                      </td>
+                      <td className="p-4 text-right">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${
+                          w.recommendation === 'SCALE_ADS' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' :
+                          w.recommendation === 'HEALTHY' ? 'bg-blue-500/20 text-blue-300' :
+                          w.recommendation === 'REQUIRE_DEPOSIT' ? 'bg-amber-500/20 text-amber-300' :
+                          'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                        }`}>
+                          {w.recommendation === 'SCALE_ADS' && '🚀 SCALER ADS'}
+                          {w.recommendation === 'HEALTHY' && '✓ STABLE'}
+                          {w.recommendation === 'REQUIRE_DEPOSIT' && '⚠️ EXIGER ACOMPTE'}
+                          {w.recommendation === 'EXCLUDE_ADS' && '⛔ EXCLURE ADS'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'ghosts' && (
+          <div className="space-y-6 max-w-6xl mx-auto pt-2">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+              <div>
+                <span className="text-xs bg-amber-500/20 text-amber-300 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                  Radar Trésorerie Séquestrée
+                </span>
+                <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
+                  Colis Immobilisés en Hubs (+7 Jours)
+                </h1>
+                <p className="text-slate-400 text-xs mt-1">
+                  Détection des expéditions oubliées ou perdues dans les centres régionaux avant prescription légale.
+                </p>
+              </div>
+
+              <div className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-2xl flex items-center gap-3">
+                <span className="text-xs text-slate-400">Trésorerie bloquée :</span>
+                <span className="font-mono text-amber-400 font-black text-lg">
+                  {ghostParcels.reduce((acc, curr) => acc + curr.codAmountDzd, 0).toLocaleString()} DZD
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
+                  <tr>
+                    <th className="p-4">N° Tracking</th>
+                    <th className="p-4">Transporteur</th>
+                    <th className="p-4">Destinataire</th>
+                    <th className="p-4">Centre Régional (Hub)</th>
+                    <th className="p-4">Jours Bloqué</th>
+                    <th className="p-4">Valeur Marchandise</th>
+                    <th className="p-4 text-right">Action Urgente</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 font-sans">
+                  {ghostParcels.map((g, idx) => (
+                    <tr key={idx} className="hover:bg-slate-800/30">
+                      <td className="p-4 font-mono font-bold text-white">{g.tracking}</td>
+                      <td className="p-4 text-slate-300">{g.carrier}</td>
+                      <td className="p-4 text-slate-200">{g.customerName} ({g.wilaya})</td>
+                      <td className="p-4 font-medium text-amber-400">{g.hubLocation}</td>
+                      <td className="p-4 font-mono font-black text-rose-400">{g.daysStuck} jours</td>
+                      <td className="p-4 font-mono font-bold text-white">{g.codAmountDzd.toLocaleString()} DZD</td>
+                      <td className="p-4 text-right">
+                        {g.status === 'IMMOBILISE' ? (
+                          <button
+                            onClick={() => handleClaimGhost(g.tracking)}
+                            className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg transition"
+                          >
+                            🚨 Lancer Réclamation Perte
+                          </button>
+                        ) : (
+                          <span className="text-emerald-400 font-bold">✓ Réclamation Transmise</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'connectors' && (
-          <div className="space-y-6 max-w-5xl mx-auto">
+          <div className="space-y-6 max-w-5xl mx-auto pt-2">
             <div>
               <span className="text-xs bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
                 Passerelles Transporteurs Directes
@@ -836,294 +1279,8 @@ export default function Dashboard() {
           </div>
         )}
 
-        {activeTab === 'orders_fraud' && (
-          <div className="space-y-6 max-w-6xl mx-auto">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <span className="text-xs bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
-                  Protection Checkout Temps Réel
-                </span>
-                <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
-                  Commandes Entrantes & Radar Anti-Fraude IP
-                </h1>
-                <p className="text-slate-400 text-xs mt-1">
-                  Filtrage automatique des commandes issues de VPN étrangers, numéros fictifs et faux acheteurs.
-                </p>
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleSimulateWebhook('legit')}
-                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3.5 py-2 rounded-xl text-xs transition shadow"
-                >
-                  + Simuler Commande Saine (Alger)
-                </button>
-                <button
-                  onClick={() => handleSimulateWebhook('fraud')}
-                  className="bg-rose-600 hover:bg-rose-500 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition shadow"
-                >
-                  🚨 Simuler Attaque VPN
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
-                <span className="text-xs text-slate-400">Commandes Saines Approuvées</span>
-                <div className="text-3xl font-black text-emerald-400 mt-1">
-                  {fraudOrders.filter(o => o.status === 'APPROUVE').length} commandes
-                </div>
-                <span className="text-[11px] text-emerald-300">Prêtes pour expédition immédiate</span>
-              </div>
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
-                <span className="text-xs text-slate-400">Commandes Bloquées (VPN / Fraud)</span>
-                <div className="text-3xl font-black text-rose-400 mt-1">
-                  {fraudOrders.filter(o => o.status === 'BLOQUE').length} bloquées
-                </div>
-                <span className="text-[11px] text-rose-300">Économie de frais d'envoi et de retour</span>
-              </div>
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
-                <span className="text-xs text-slate-400">Endpoint Webhook Actif</span>
-                <div className="text-xs font-mono text-cyan-400 mt-2 truncate bg-slate-950 p-2 rounded-lg border border-slate-800 select-all">
-                  /api/orders/webhook
-                </div>
-                <span className="text-[10px] text-slate-500">Prêt pour Shopify / YouCan / WooCommerce</span>
-              </div>
-            </div>
-
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
-                  <tr>
-                    <th className="p-4">N° Commande</th>
-                    <th className="p-4">Client</th>
-                    <th className="p-4">Numéro Téléphone</th>
-                    <th className="p-4">Adresse IP Client</th>
-                    <th className="p-4">Détection VPN</th>
-                    <th className="p-4">Score Confiance</th>
-                    <th className="p-4 text-right">Décision Système</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-sans">
-                  {fraudOrders.map((ord, idx) => (
-                    <tr key={idx} className="hover:bg-slate-800/30">
-                      <td className="p-4 font-mono font-bold text-white">{ord.orderId}</td>
-                      <td className="p-4 text-slate-200 font-medium">{ord.customerName}</td>
-                      <td className="p-4 font-mono text-slate-300">{ord.phone}</td>
-                      <td className="p-4 font-mono text-slate-400">{ord.ipAddress}</td>
-                      <td className="p-4">
-                        {ord.isVpn ? (
-                          <span className="px-2 py-0.5 bg-rose-500/20 text-rose-400 font-bold rounded border border-rose-500/40">
-                            🚨 VPN / Datacenter Détecté
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 font-bold rounded border border-emerald-500/40">
-                            ✓ IP Résidentielle DZ
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-4 font-mono font-black text-sm">
-                        <span className={ord.score >= 70 ? 'text-emerald-400' : ord.score >= 40 ? 'text-amber-400' : 'text-rose-500'}>
-                          {ord.score}/100
-                        </span>
-                      </td>
-                      <td className="p-4 text-right">
-                        <span className={`px-2.5 py-1 rounded text-[10px] font-black ${
-                          ord.status === 'APPROUVE' ? 'bg-emerald-500/20 text-emerald-400' :
-                          ord.status === 'SUSPECT' ? 'bg-amber-500/20 text-amber-400' : 'bg-rose-500/20 text-rose-400'
-                        }`}>
-                          {ord.status === 'APPROUVE' && '✓ VALIDÉE'}
-                          {ord.status === 'SUSPECT' && '⚠️ ENQUÊTE APPEL'}
-                          {ord.status === 'BLOQUE' && '⛔ REJETÉE'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'wilayas' && (
-          <div className="space-y-6 max-w-6xl mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div>
-                <span className="text-xs bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
-                  Moteur P&L & Arbitrage Publicitaire
-                </span>
-                <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
-                  Rentabilité Nette par Wilaya & Décisions Meta Ads
-                </h1>
-                <p className="text-slate-400 text-xs mt-1">
-                  Chiffre d'affaires encaissé vs Coûts réels de retours pour optimiser vos budgets publicitaires.
-                </p>
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setWilayaFilter('ALL')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                    wilayaFilter === 'ALL' ? 'bg-slate-800 text-white border border-slate-700' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Toutes
-                </button>
-                <button
-                  onClick={() => setWilayaFilter('SCALE')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                    wilayaFilter === 'SCALE' ? 'bg-emerald-500 text-slate-950 font-black' : 'text-emerald-400 hover:bg-emerald-500/10'
-                  }`}
-                >
-                  🚀 À Scaler Meta Ads
-                </button>
-                <button
-                  onClick={() => setWilayaFilter('EXCLUDE')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                    wilayaFilter === 'EXCLUDE' ? 'bg-rose-600 text-white font-black' : 'text-rose-400 hover:bg-rose-500/10'
-                  }`}
-                >
-                  ⛔ À Exclure Meta Ads
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
-                <span className="text-xs text-slate-400">Wilayas Hautement Rentables</span>
-                <div className="text-3xl font-black text-emerald-400 mt-1">
-                  {wilayaStats.filter(w => w.recommendation === 'SCALE_ADS').length} Wilayas
-                </div>
-                <span className="text-[11px] text-emerald-300">Taux de livraison supérieur à 85%</span>
-              </div>
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
-                <span className="text-xs text-slate-400">Wilayas Déficitaires</span>
-                <div className="text-3xl font-black text-rose-400 mt-1">
-                  {wilayaStats.filter(w => w.recommendation === 'EXCLUDE_ADS').length} Wilayas
-                </div>
-                <span className="text-[11px] text-rose-300">Pertes de retours supérieures aux bénéfices</span>
-              </div>
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
-                <span className="text-xs text-slate-400">Économie publicitaire mensuelle estimée</span>
-                <div className="text-3xl font-black text-white mt-1">+65 000 DZD</div>
-                <span className="text-[11px] text-slate-400">En excluant les wilayas à risque de vos Adsets</span>
-              </div>
-            </div>
-
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
-                  <tr>
-                    <th className="p-4">Wilaya</th>
-                    <th className="p-4">Expédiés</th>
-                    <th className="p-4">Taux Livré</th>
-                    <th className="p-4">CA Encaissé</th>
-                    <th className="p-4">Pertes Retours</th>
-                    <th className="p-4">Marge Nette Réelle</th>
-                    <th className="p-4 text-right">Décision Meta Ads</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-sans">
-                  {filteredWilayas.map((w, idx) => (
-                    <tr key={idx} className="hover:bg-slate-800/30">
-                      <td className="p-4 font-bold text-white">{w.code} - {w.name}</td>
-                      <td className="p-4 font-mono text-slate-300">{w.totalShipped} colis</td>
-                      <td className="p-4 font-mono font-bold text-emerald-400">{w.deliveredRate}%</td>
-                      <td className="p-4 font-mono text-slate-200">{w.grossSalesDzd.toLocaleString()} DZD</td>
-                      <td className="p-4 font-mono text-rose-400 font-bold">-{w.rtoLossDzd.toLocaleString()} DZD</td>
-                      <td className="p-4 font-mono font-black">
-                        <span className={w.netMarginDzd > 0 ? 'text-emerald-400' : 'text-rose-500'}>
-                          {w.netMarginDzd > 0 ? `+${w.netMarginDzd.toLocaleString()} DZD` : `${w.netMarginDzd.toLocaleString()} DZD`}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${
-                          w.recommendation === 'SCALE_ADS' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' :
-                          w.recommendation === 'HEALTHY' ? 'bg-blue-500/20 text-blue-300' :
-                          w.recommendation === 'REQUIRE_DEPOSIT' ? 'bg-amber-500/20 text-amber-300' :
-                          'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                        }`}>
-                          {w.recommendation === 'SCALE_ADS' && '🚀 SCALER ADS'}
-                          {w.recommendation === 'HEALTHY' && '✓ STABLE'}
-                          {w.recommendation === 'REQUIRE_DEPOSIT' && '⚠️ EXIGER ACOMPTE'}
-                          {w.recommendation === 'EXCLUDE_ADS' && '⛔ EXCLURE ADS'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'ghosts' && (
-          <div className="space-y-6 max-w-6xl mx-auto">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-              <div>
-                <span className="text-xs bg-amber-500/20 text-amber-300 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
-                  Radar Trésorerie Séquestrée
-                </span>
-                <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
-                  Colis Immobilisés en Hubs (+7 Jours)
-                </h1>
-                <p className="text-slate-400 text-xs mt-1">
-                  Détection des expéditions oubliées ou perdues dans les centres régionaux avant prescription légale.
-                </p>
-              </div>
-
-              <div className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-2xl flex items-center gap-3">
-                <span className="text-xs text-slate-400">Trésorerie bloquée :</span>
-                <span className="font-mono text-amber-400 font-black text-lg">
-                  {ghostParcels.reduce((acc, curr) => acc + curr.codAmountDzd, 0).toLocaleString()} DZD
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
-                  <tr>
-                    <th className="p-4">N° Tracking</th>
-                    <th className="p-4">Transporteur</th>
-                    <th className="p-4">Destinataire</th>
-                    <th className="p-4">Centre Régional (Hub)</th>
-                    <th className="p-4">Jours Bloqué</th>
-                    <th className="p-4">Valeur Marchandise</th>
-                    <th className="p-4 text-right">Action Urgente</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-sans">
-                  {ghostParcels.map((g, idx) => (
-                    <tr key={idx} className="hover:bg-slate-800/30">
-                      <td className="p-4 font-mono font-bold text-white">{g.tracking}</td>
-                      <td className="p-4 text-slate-300">{g.carrier}</td>
-                      <td className="p-4 text-slate-200">{g.customerName} ({g.wilaya})</td>
-                      <td className="p-4 font-medium text-amber-400">{g.hubLocation}</td>
-                      <td className="p-4 font-mono font-black text-rose-400">{g.daysStuck} jours</td>
-                      <td className="p-4 font-mono font-bold text-white">{g.codAmountDzd.toLocaleString()} DZD</td>
-                      <td className="p-4 text-right">
-                        {g.status === 'IMMOBILISE' ? (
-                          <button
-                            onClick={() => handleClaimGhost(g.tracking)}
-                            className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg transition"
-                          >
-                            🚨 Lancer Réclamation Perte
-                          </button>
-                        ) : (
-                          <span className="text-emerald-400 font-bold">✓ Réclamation Transmise</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
         {activeTab === 'api_settings' && (
-          <div className="space-y-6 max-w-5xl mx-auto">
+          <div className="space-y-6 max-w-5xl mx-auto pt-2">
             <div>
               <span className="text-xs bg-cyan-500/20 text-cyan-300 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
                 Connecteurs E-commerce & Webhooks
@@ -1169,136 +1326,8 @@ export default function Dashboard() {
           </div>
         )}
 
-        {activeTab === 'dispute' && (
-          <div className="space-y-6 max-w-5xl mx-auto">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-black text-white">Dossiers de Litiges Transporteurs</h2>
-              <button onClick={exportDisputeCsv} className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition">
-                📑 Exporter Bordereau (.CSV)
-              </button>
-            </div>
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
-                  <tr>
-                    <th className="p-4">Dossier</th>
-                    <th className="p-4">Tracking</th>
-                    <th className="p-4">Transporteur</th>
-                    <th className="p-4">Motif</th>
-                    <th className="p-4">Montant Réclamé</th>
-                    <th className="p-4 text-right">Statut</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-sans">
-                  {disputes.map((d, idx) => (
-                    <tr key={idx}>
-                      <td className="p-4 font-mono font-bold text-white">{d.id}</td>
-                      <td className="p-4 font-mono text-emerald-400">{d.tracking}</td>
-                      <td className="p-4">{d.carrier}</td>
-                      <td className="p-4 text-slate-300">{d.issue}</td>
-                      <td className="p-4 font-bold text-rose-400">+{d.amountClaimedDzd} DZD</td>
-                      <td className="p-4 text-right font-black text-amber-400">{d.status}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'blacklist' && (
-          <div className="space-y-8 max-w-5xl mx-auto">
-            <div>
-              <h2 className="text-3xl font-extrabold text-white">Score Acheteur & Blacklist Algérie Partagée</h2>
-              <p className="text-slate-400 text-sm mt-1">Auditez tout numéro client avant validation pour éliminer les retours coûteux.</p>
-            </div>
-
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-              <form onSubmit={handleSearchBuyer} className="flex flex-col sm:flex-row gap-3">
-                <input
-                  type="text"
-                  placeholder="Ex : 0550123456 ou 0770987654"
-                  value={searchPhone}
-                  onChange={(e) => setSearchPhone(e.target.value)}
-                  className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white font-mono text-base focus:border-amber-400 focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  disabled={isSearchingPhone}
-                  className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-6 py-3 rounded-xl transition"
-                >
-                  {isSearchingPhone ? 'Analyse...' : 'Auditer le Numéro'}
-                </button>
-              </form>
-
-              {hasSearched && (
-                <div className="pt-4 border-t border-slate-800">
-                  {searchResult ? (
-                    <div className="p-5 rounded-xl border bg-slate-950/70 border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6">
-                      <div className="space-y-2 text-center md:text-left">
-                        <div className="flex items-center gap-3">
-                          <span className="font-mono text-xl font-bold text-white">{searchResult.phone_number}</span>
-                          <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${
-                            searchResult.risk_level === 'LOW' ? 'bg-emerald-500/20 text-emerald-400' :
-                            searchResult.risk_level === 'MEDIUM' ? 'bg-amber-500/20 text-amber-400' :
-                            'bg-rose-500/20 text-rose-400 animate-pulse'
-                          }`}>
-                            {searchResult.risk_level === 'LOW' && '✓ CLIENT FIABLE'}
-                            {searchResult.risk_level === 'MEDIUM' && '⚠️ RISQUE MOYEN'}
-                            {searchResult.risk_level === 'HIGH' && '🚨 RISQUE ÉLEVÉ'}
-                            {searchResult.risk_level === 'BLACKLISTED' && '⛔ LISTE NOIRE'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-400">
-                          Historique : <strong className="text-white">{searchResult.delivered_orders}</strong> livrées sur <strong className="text-white">{searchResult.total_orders}</strong> commandes.
-                        </p>
-                      </div>
-                      <div className="text-center p-4 bg-slate-900 border border-slate-800 rounded-xl min-w-[130px]">
-                        <div className="text-4xl font-black text-amber-400">{searchResult.trust_score}/100</div>
-                        <span className="text-[10px] text-slate-400 uppercase font-semibold">Indice de Confiance</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center text-slate-400 text-sm">
-                      ✨ Numéro jamais signalé. Aucun antécédent négatif dans la base partagée.
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4">
-              <h3 className="text-base font-bold text-white">📢 Signaler un Acheteur Fantôme ou Refus Abusif</h3>
-              <form onSubmit={handleReportBuyer} className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <input
-                  type="text"
-                  required
-                  placeholder="Numéro (0661...)"
-                  value={reportPhone}
-                  onChange={(e) => setReportPhone(e.target.value)}
-                  className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white font-mono"
-                />
-                <select
-                  value={reportReason}
-                  onChange={(e) => setReportReason(e.target.value)}
-                  className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white"
-                >
-                  <option value="Client Injoignable">Client Injoignable</option>
-                  <option value="Refus à l'ouverture">Refus à l'ouverture du colis</option>
-                  <option value="Numéro erroné / Fake">Faux numéro / Numéro erroné</option>
-                  <option value="Report abusif / Annulation">Report abusif puis annulation</option>
-                </select>
-                <button type="submit" className="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition">
-                  Ajouter au Répertoire Partagé
-                </button>
-              </form>
-              {reportingStatus && <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs rounded-xl">{reportingStatus}</div>}
-            </div>
-          </div>
-        )}
-
         {activeTab === 'billing' && (
-          <div className="space-y-8 max-w-5xl mx-auto">
+          <div className="space-y-8 max-w-5xl mx-auto pt-2">
             <div className="text-center max-w-2xl mx-auto space-y-2">
               <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-full border border-emerald-500/20">
                 Paiements Sécurisés Algérie (BaridiMob / CCP)
@@ -1502,7 +1531,7 @@ export default function Dashboard() {
                       )}`}
                       className="p-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl text-xs flex flex-col items-center justify-center gap-1.5 transition border border-slate-700"
                     >
-                      <span className="text-lg">✉️</span>
+                      <span className="text-lg">✉️️</span>
                       <span>Envoyer par Email</span>
                     </a>
                   </div>
@@ -1513,7 +1542,7 @@ export default function Dashboard() {
         )}
 
         {activeTab === 'contact' && (
-          <div className="space-y-6 max-w-3xl mx-auto">
+          <div className="space-y-6 max-w-3xl mx-auto pt-2">
             <h2 className="text-2xl font-black text-white">Support & Assistance</h2>
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-3 text-xs">
               <div className="flex justify-between p-3 bg-slate-950 rounded-xl">
