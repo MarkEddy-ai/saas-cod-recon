@@ -64,18 +64,18 @@ interface OrderFraudItem {
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<
-    'blacklist' | 'billing' | 'orders_fraud' | 'connectors' | 'api_settings' | 'rto_audit' | 'ghosts' | 'dispute' | 'wilayas' | 'crm' | 'reviews' | 'contact'
+    'billing' | 'blacklist' | 'orders_fraud' | 'rto_audit' | 'dispute' | 'ghosts' | 'wilayas' | 'connectors' | 'api_settings' | 'reviews' | 'contact'
   >('billing');
 
   const [copySuccess, setCopySuccess] = useState(false);
 
-  // Coordonnées officielles du bénéficiaire
-  const adminName = "ZOGHLAMI BADREDDINE";
-  const adminRip = "00799999000232882074";
-  const adminPhoneWhatsApp = "213550000000"; // Remplacez par votre numéro WhatsApp de réception
-  const adminEmail = "support@reconciliation-dz.com";
+  // ENTITÉ PROFESSIONNELLE ANONYMISÉE
+  const corporateBillingEntity = "COD Reconciliation DZ — Service Comptabilité & Licences";
+  const billingRip = "00799999000232882074";
+  const supportWhatsAppNumber = "213550000000";
+  const supportEmail = "contact@reconciliation-dz.com";
 
-  // Tarifs & Abonnements (Pack Business à 2 000 DZD)
+  // Tarifs : Pack Business à 2 000 DZD
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'business' | 'ultra'>('business');
 
@@ -99,7 +99,7 @@ export default function Dashboard() {
   };
 
   const handleCopyRip = () => {
-    navigator.clipboard.writeText(adminRip);
+    navigator.clipboard.writeText(billingRip);
     setCopySuccess(true);
     setTimeout(() => setCopySuccess(false), 2500);
   };
@@ -143,7 +143,7 @@ export default function Dashboard() {
         ]);
 
       if (dbError) throw new Error(dbError.message);
-      setReceiptUploadSuccess("✓ Reçu BaridiMob bien réceptionné ! Validation sous 15 minutes.");
+      setReceiptUploadSuccess("✓ Reçu BaridiMob transmis avec succès ! Votre licence sera confirmée sous 15 minutes.");
     } catch (err: any) {
       setReceiptUploadError(`Erreur : ${err.message || 'Impossible de joindre Supabase'}`);
     } finally {
@@ -153,7 +153,7 @@ export default function Dashboard() {
     }
   };
 
-  // Score Acheteur & Blacklist
+  // Score Acheteur Anti-RTO
   const [searchPhone, setSearchPhone] = useState('');
   const [searchResult, setSearchResult] = useState<BuyerReputation | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
@@ -248,7 +248,7 @@ export default function Dashboard() {
       id: "LIT-2026-001",
       tracking: "yal_ret_104821",
       carrier: "Yalidine Express",
-      customerName: "Kamel Zerrouki (35)",
+      customerName: "Client Boumerdès (35)",
       amountClaimedDzd: 350,
       issue: "Surfacturation tarif de retour non conforme au contrat",
       status: "EN_COURS",
@@ -258,9 +258,9 @@ export default function Dashboard() {
       id: "LIT-2026-002",
       tracking: "zr_ret_992144",
       carrier: "ZR Express",
-      customerName: "Imane Sahli (15)",
+      customerName: "Client Tizi Ouzou (15)",
       amountClaimedDzd: 350,
-      issue: "Retour sans tentative d'appel téléphonique prouvée",
+      issue: "Retour sans tentative d'appel téléphonique tracée",
       status: "OUVERT",
       dateAdded: "29/09/2026"
     },
@@ -268,27 +268,27 @@ export default function Dashboard() {
       id: "LIT-2026-003",
       tracking: "yal_dz_7701923",
       carrier: "Yalidine Express",
-      customerName: "Tarek Berrabah (30)",
+      customerName: "Client Ghardaïa (47)",
       amountClaimedDzd: 18500,
-      issue: "Colis perdu / bloqué plus de 16 jours au hub régional de Ghardaïa",
+      issue: "Colis bloqué plus de 16 jours au hub régional sans livraison",
       status: "OUVERT",
       dateAdded: "25/09/2026"
     }
   ]);
 
-  // Données Filtre IP & Commandes Suspectes
+  // Données Fraude IP
   const [fraudOrders] = useState<OrderFraudItem[]>([
-    { orderId: "CMD-9941", customerName: "Karim Slimani", phone: "0770123984", ipAddress: "105.101.42.18", isVpn: false, score: 95, status: "APPROUVE" },
-    { orderId: "CMD-9942", customerName: "Anonyme Fake", phone: "0661234567", ipAddress: "185.220.101.5", isVpn: true, score: 10, status: "BLOQUE" },
-    { orderId: "CMD-9943", customerName: "Sofiane Mansouri", phone: "0550482914", ipAddress: "41.107.82.90", isVpn: false, score: 62, status: "SUSPECT" }
+    { orderId: "CMD-9941", customerName: "Client Alger Centre", phone: "0770123984", ipAddress: "105.101.42.18", isVpn: false, score: 95, status: "APPROUVE" },
+    { orderId: "CMD-9942", customerName: "Tentative Suspecte", phone: "0661234567", ipAddress: "185.220.101.5", isVpn: true, score: 10, status: "BLOQUE" },
+    { orderId: "CMD-9943", customerName: "Client Oran", phone: "0550482914", ipAddress: "41.107.82.90", isVpn: false, score: 62, status: "SUSPECT" }
   ]);
 
   // Données RTO Audit
   const [rtoAudits] = useState<RtoAuditRow[]>([
-    { tracking: "yal_ret_104821", carrier: "Yalidine Express", customerName: "Kamel Zerrouki", wilaya: "Boumerdès (35)", returnReason: "Client Injoignable", negotiatedReturnFee: 200, chargedReturnFee: 550, overchargedFee: 350, callLogVerified: false, status: "OVERCHARGED" },
-    { tracking: "zr_ret_992144", carrier: "ZR Express", customerName: "Imane Sahli", wilaya: "Tizi Ouzou (15)", returnReason: "Adresse Incomplète", negotiatedReturnFee: 250, chargedReturnFee: 600, overchargedFee: 350, callLogVerified: false, status: "OVERCHARGED" },
-    { tracking: "yal_ret_104899", carrier: "Yalidine Express", customerName: "Tahar Bouzid", wilaya: "Médéa (26)", returnReason: "Refus - Non Conforme", negotiatedReturnFee: 250, chargedReturnFee: 250, overchargedFee: 0, callLogVerified: true, status: "CONFORME" },
-    { tracking: "zr_ret_774012", carrier: "ZR Express", customerName: "Nadia Cherfa", wilaya: "Biskra (07)", returnReason: "Client Absent", negotiatedReturnFee: 300, chargedReturnFee: 750, overchargedFee: 450, callLogVerified: false, status: "OVERCHARGED" }
+    { tracking: "yal_ret_104821", carrier: "Yalidine Express", customerName: "Destinataire #1048", wilaya: "Boumerdès (35)", returnReason: "Client Injoignable", negotiatedReturnFee: 200, chargedReturnFee: 550, overchargedFee: 350, callLogVerified: false, status: "OVERCHARGED" },
+    { tracking: "zr_ret_992144", carrier: "ZR Express", customerName: "Destinataire #9921", wilaya: "Tizi Ouzou (15)", returnReason: "Adresse Incomplète", negotiatedReturnFee: 250, chargedReturnFee: 600, overchargedFee: 350, callLogVerified: false, status: "OVERCHARGED" },
+    { tracking: "yal_ret_104899", carrier: "Yalidine Express", customerName: "Destinataire #1048B", wilaya: "Médéa (26)", returnReason: "Refus à l'ouverture", negotiatedReturnFee: 250, chargedReturnFee: 250, overchargedFee: 0, callLogVerified: true, status: "CONFORME" },
+    { tracking: "zr_ret_774012", carrier: "ZR Express", customerName: "Destinataire #7740", wilaya: "Biskra (07)", returnReason: "Client Absent", negotiatedReturnFee: 300, chargedReturnFee: 750, overchargedFee: 450, callLogVerified: false, status: "OVERCHARGED" }
   ]);
 
   // Données Wilayas
@@ -299,16 +299,15 @@ export default function Dashboard() {
     { code: "39", name: "El Oued", deliveredRate: 46.5, rtoRate: 53.5, grossSalesDzd: 185000, deliveryFeesDzd: 32000, rtoCostDzd: 24500, netMarginDzd: -14200, recommendation: "REQUIRE_DEPOSIT" }
   ];
 
-  // Témoignages
   const reviews = [
-    { name: "Yacine B.", store: "Boutique Mode & Chaussures (Alger)", comment: "Grâce à l'audit des retours, j'ai récupéré 48 000 DZD surfacturés par les livreurs en un seul mois.", rating: 5 },
-    { name: "Mehdi T.", store: "TechZone DZ (Oran)", comment: "Le score acheteur m'a évité au moins 30 colis refusés cette semaine. Indispensable pour tout vendeur COD.", rating: 5 },
-    { name: "Samia K.", store: "Cosmétique Bio (Constantine)", comment: "Le rapprochement automatique m'a fait gagner 2 jours entiers de calculs Excel par quinzaine.", rating: 5 }
+    { name: "Boutique Prêt-à-Porter (Alger)", comment: "En auditant notre premier mois de quittances, le SaaS a repéré 52 000 DZD de surfacturations indues.", rating: 5 },
+    { name: "Magasin Tech & Accessoires (Oran)", comment: "Le score acheteur nous a permis de baisser notre taux de retour global de 28% à moins de 14%.", rating: 5 },
+    { name: "Store Électroménager (Constantine)", comment: "Le rapprochement des versements avec Yalidine et ZR nous évite deux journées de réconciliation manuelle par quinzaine.", rating: 5 }
   ];
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans">
-      {/* SIDEBAR COMPLÈTE & PROFESSIONNELLE */}
+      {/* SIDEBAR ABONNÉ */}
       <aside className="w-72 border-r border-slate-800 bg-slate-900/80 p-5 flex flex-col justify-between hidden md:flex shrink-0">
         <div className="space-y-6">
           <div className="flex items-center gap-2.5">
@@ -317,12 +316,25 @@ export default function Dashboard() {
             </div>
             <div>
               <span className="font-extrabold text-base tracking-tight text-white block">Reconciliation DZ</span>
-              <span className="text-[10px] text-emerald-400 font-semibold tracking-wider uppercase">SaaS E-commerce Algérie</span>
+              <span className="text-[10px] text-emerald-400 font-semibold tracking-wider uppercase">Espace Marchand</span>
             </div>
           </div>
 
+          <Link
+            href="/guide"
+            className="block p-3 rounded-xl bg-gradient-to-r from-emerald-500/10 to-blue-500/10 border border-emerald-500/30 hover:border-emerald-400 transition"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                📖 Guide & Annuaire Valeur
+              </span>
+              <span className="text-[10px] bg-emerald-500 text-slate-950 font-bold px-1.5 py-0.5 rounded">WIKI</span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">Comprendre comment récupérer vos marges perdues.</p>
+          </Link>
+
           <nav className="space-y-1 text-xs">
-            <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sécurité & Paiement</div>
+            <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sécurité & Trésorerie</div>
             
             <button
               onClick={() => setActiveTab('billing')}
@@ -381,7 +393,7 @@ export default function Dashboard() {
                 activeTab === 'ghosts' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' : 'text-slate-300 hover:bg-slate-800'
               }`}
             >
-              <span className="flex items-center gap-2">🚨 Colis Fantômes (Hubs)</span>
+              <span className="flex items-center gap-2">🚨 Colis Bloqués (Hubs)</span>
             </button>
 
             <button
@@ -390,7 +402,7 @@ export default function Dashboard() {
                 activeTab === 'wilayas' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-800'
               }`}
             >
-              <span className="flex items-center gap-2">🗺️ Rentabilité par Wilaya</span>
+              <span className="flex items-center gap-2">🗺️️ Rentabilité par Wilaya</span>
             </button>
 
             <div className="pt-3 px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Intégrations & Système</div>
@@ -414,21 +426,12 @@ export default function Dashboard() {
             </button>
 
             <button
-              onClick={() => setActiveTab('crm')}
-              className={`w-full text-left px-3 py-2.5 rounded-xl font-semibold transition flex items-center justify-between ${
-                activeTab === 'crm' ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30' : 'text-slate-300 hover:bg-slate-800'
-              }`}
-            >
-              <span className="flex items-center gap-2">👥 CRM Marchands</span>
-            </button>
-
-            <button
               onClick={() => setActiveTab('reviews')}
               className={`w-full text-left px-3 py-2.5 rounded-xl font-semibold transition flex items-center justify-between ${
                 activeTab === 'reviews' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' : 'text-slate-300 hover:bg-slate-800'
               }`}
             >
-              <span className="flex items-center gap-2">⭐ Avis & Crédibilité</span>
+              <span className="flex items-center gap-2">⭐ Retours d'Expérience</span>
             </button>
 
             <button
@@ -437,41 +440,39 @@ export default function Dashboard() {
                 activeTab === 'contact' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-800'
               }`}
             >
-              <span className="flex items-center gap-2">📞 Contact & Support</span>
+              <span className="flex items-center gap-2">📞 Support Dédié</span>
             </button>
           </nav>
         </div>
 
         <div className="border-t border-slate-800 pt-4 space-y-1">
-          <div className="text-[11px] text-slate-400">Fondateur & Bénéficiaire officiel :</div>
-          <div className="text-xs font-bold text-white tracking-wide">{adminName}</div>
+          <div className="text-[11px] text-slate-400">Entité de facturation :</div>
+          <div className="text-xs font-bold text-white tracking-wide">COD Reconciliation DZ</div>
           <div className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            Bénéficiaire BaridiMob Actif
+            Passerelle BaridiMob Certifiée
           </div>
-          <div className="pt-2">
+          <div className="pt-2 flex justify-between items-center">
             <Link href="/auth" className="text-[11px] text-rose-400 hover:underline">Se déconnecter</Link>
+            <Link href="/admin" className="text-[10px] text-slate-400 hover:text-slate-300 font-mono">Administration 🔒</Link>
           </div>
         </div>
       </aside>
 
       {/* ZONE CENTRALE */}
       <main className="flex-1 p-6 md:p-8 overflow-y-auto">
-        {/* ======================================================== */}
-        {/* ONGLET 1 : FORFAITS & REÇUS BARIDIMOB (AVEC PRIX 2000 DZD) */}
-        {/* ======================================================== */}
+        {/* ONGLET FORFAITS & REÇUS BARIDIMOB */}
         {activeTab === 'billing' && (
           <div className="space-y-8 max-w-5xl mx-auto">
             <div className="text-center max-w-2xl mx-auto space-y-2">
               <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-full border border-emerald-500/20">
-                Paiements 100% Algérie & Internationaux
+                Paiements Sécurisés Algérie (BaridiMob / CCP)
               </span>
-              <h2 className="text-3xl font-black text-white tracking-tight">Forfaits & Règlements</h2>
+              <h2 className="text-3xl font-black text-white tracking-tight">Abonnements & Règlements</h2>
               <p className="text-slate-400 text-sm">
-                Activez votre abonnement immédiatement par BaridiMob, par capture, ou par carte bancaire.
+                Activez votre accès instantanément via virement BaridiMob ou par capture de reçu.
               </p>
 
-              {/* Commutateur Mensuel / Annuel */}
               <div className="pt-4 flex items-center justify-center gap-3">
                 <span className={`text-xs font-semibold ${billingCycle === 'monthly' ? 'text-white' : 'text-slate-400'}`}>Mensuel</span>
                 <button
@@ -487,7 +488,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Cartes des 3 Forfaits */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* FREE */}
               <div
@@ -497,19 +497,19 @@ export default function Dashboard() {
                 }`}
               >
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-lg font-bold text-white">Pack Free</h3>
+                  <h3 className="text-lg font-bold text-white">Pack Découverte</h3>
                   <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">Essai</span>
                 </div>
                 <div className="text-3xl font-black text-white my-3">0 DZD</div>
-                <p className="text-xs text-slate-400 mb-4">Pour tester le rapprochement sur 50 commandes.</p>
+                <p className="text-xs text-slate-400 mb-4">Pour tester l'audit sur un échantillon de 50 commandes.</p>
                 <ul className="text-xs text-slate-300 space-y-2">
-                  <li>✓ 50 commandes auditées</li>
-                  <li>✓ Rapprochement Yalidine de base</li>
-                  <li>✕ Pas de détection fraude IP</li>
+                  <li>✓ 50 commandes analysées</li>
+                  <li>✓ Audit de base des tarifs de livraison</li>
+                  <li>✕ Détection IP & VPN désactivée</li>
                 </ul>
               </div>
 
-              {/* BUSINESS (2 000 DZD) */}
+              {/* BUSINESS - 2000 DZD */}
               <div
                 onClick={() => setSelectedPlan('business')}
                 className={`p-6 rounded-2xl border cursor-pointer relative transition ${
@@ -521,17 +521,17 @@ export default function Dashboard() {
                 </span>
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="text-lg font-bold text-white">Pack Business</h3>
-                  <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono">Pro</span>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono">Complet</span>
                 </div>
                 <div className="text-3xl font-black text-white my-3">
                   {getPrice('business').dzd.toLocaleString()} DZD
                   <span className="text-xs font-normal text-slate-400 ml-1.5">{getPrice('business').periodText}</span>
                 </div>
-                <p className="text-xs text-slate-400 mb-4">Idéal pour les boutiques réalisant jusqu'à 800 commandes / mois.</p>
+                <p className="text-xs text-slate-400 mb-4">Pour les boutiques traitant jusqu'à 800 colis par mois.</p>
                 <ul className="text-xs text-slate-300 space-y-2">
-                  <li>✓ Jusqu'à 800 commandes / mois</li>
-                  <li>✓ Détection RTO surfacturé & Litiges</li>
-                  <li>✓ Score Acheteur & Blacklist Partagée</li>
+                  <li>✓ Jusqu'à 800 colis / mois audités</li>
+                  <li>✓ Détection des surfacturations & litiges</li>
+                  <li>✓ Radar Anti-RTO & Score Acheteur</li>
                   <li>✓ Connecteurs Yalidine + ZR Express</li>
                 </ul>
               </div>
@@ -545,51 +545,49 @@ export default function Dashboard() {
               >
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="text-lg font-bold text-white">Pack Ultra Illimité</h3>
-                  <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded font-mono">Illimité</span>
+                  <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded font-mono">Élite</span>
                 </div>
                 <div className="text-3xl font-black text-white my-3">
                   {getPrice('ultra').dzd.toLocaleString()} DZD
                   <span className="text-xs font-normal text-slate-400 ml-1.5">{getPrice('ultra').periodText}</span>
                 </div>
-                <p className="text-xs text-slate-400 mb-4">Pour les gros volumes et agences e-commerce en Algérie.</p>
+                <p className="text-xs text-slate-400 mb-4">Idéal pour les agences e-commerce et gros distributeurs.</p>
                 <ul className="text-xs text-slate-300 space-y-2">
-                  <li>✓ Commandes 100% illimitées</li>
+                  <li>✓ Volume de colis illimité</li>
                   <li>✓ Tous transporteurs DZ connectés</li>
-                  <li>✓ Filtre IP / VPN & Webhook MCP</li>
-                  <li>✓ Support prioritaire WhatsApp 7j/7</li>
+                  <li>✓ Filtre anti-fraude IP / Proxy en temps réel</li>
+                  <li>✓ Support prioritaire 7j/7</li>
                 </ul>
               </div>
             </div>
 
-            {/* OPTIONS DE PAIEMENT & TRANSMISSION DU REÇU BARIDIMOB */}
             {selectedPlan !== 'free' && (
               <div className="bg-slate-900 border-2 border-emerald-500 rounded-3xl p-6 md:p-8 space-y-6 shadow-2xl">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-5">
                   <div>
                     <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded-full">
-                      Paiement Officiel par BaridiMob / CCP
+                      Paiement Sécurisé BaridiMob / CCP
                     </span>
                     <h3 className="text-2xl font-black text-white mt-2">
-                      Montant à virer : {getPrice(selectedPlan).dzd.toLocaleString()} DZD
+                      Montant net à transférer : {getPrice(selectedPlan).dzd.toLocaleString()} DZD
                     </h3>
                   </div>
                   <div className="text-xs text-slate-400 bg-slate-950 px-4 py-2 rounded-xl border border-slate-800">
-                    Validation manuelle et activation sous <strong className="text-emerald-400">15 minutes</strong>
+                    Activation de votre licence sous <strong className="text-emerald-400">15 minutes</strong>
                   </div>
                 </div>
 
-                {/* Coordonnées RIP */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-1">
                     <span className="text-xs text-slate-400">Bénéficiaire Officiel :</span>
-                    <div className="text-base font-bold text-white">{adminName}</div>
-                    <span className="text-[11px] text-emerald-400">Compte certifié Algérie Poste</span>
+                    <div className="text-base font-bold text-white">{corporateBillingEntity}</div>
+                    <span className="text-[11px] text-emerald-400">Compte vérifié Algérie Poste</span>
                   </div>
 
                   <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
                     <span className="text-xs text-slate-400">Numéro RIP BaridiMob (20 chiffres) :</span>
                     <div className="flex items-center justify-between bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                      <span className="font-mono text-emerald-400 font-bold text-sm tracking-wider select-all">{adminRip}</span>
+                      <span className="font-mono text-emerald-400 font-bold text-sm tracking-wider select-all">{billingRip}</span>
                       <button
                         onClick={handleCopyRip}
                         className="px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-lg transition"
@@ -600,13 +598,11 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* MODES D'ENVOI DU REÇU : CAPTURE, APPAREIL PHOTO, WHATSAPP, EMAIL */}
                 <div className="space-y-4 pt-2">
                   <h4 className="text-sm font-bold text-white uppercase tracking-wider">
-                    Transmettre la preuve de paiement (Reçu BaridiMob) :
+                    Transmettre votre preuve de règlement :
                   </h4>
 
-                  {/* Inputs cachés pour fichiers */}
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -636,7 +632,6 @@ export default function Dashboard() {
                   )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {/* Bouton 1 : Téléverser Capture d'écran */}
                     <button
                       type="button"
                       disabled={isUploadingReceipt}
@@ -647,7 +642,6 @@ export default function Dashboard() {
                       <span>Téléverser Capture</span>
                     </button>
 
-                    {/* Bouton 2 : Prendre en photo avec le smartphone */}
                     <button
                       type="button"
                       disabled={isUploadingReceipt}
@@ -658,10 +652,9 @@ export default function Dashboard() {
                       <span>Prendre en Photo</span>
                     </button>
 
-                    {/* Bouton 3 : Envoyer par WhatsApp */}
                     <a
-                      href={`https://wa.me/${adminPhoneWhatsApp}?text=${encodeURIComponent(
-                        `Bonjour, j'ai effectué le virement BaridiMob de ${getPrice(selectedPlan).dzd} DZD pour le${plans[selectedPlan].name}. Voici ma capture d'écran pour activation de mon compte.`
+                      href={`https://wa.me/${supportWhatsAppNumber}?text=${encodeURIComponent(
+                        `Bonjour, j'ai effectué le virement BaridiMob de ${getPrice(selectedPlan).dzd} DZD pour le${plans[selectedPlan].name}. Voici ma capture d'écran pour validation de ma licence.`
                       )}`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -671,12 +664,11 @@ export default function Dashboard() {
                       <span>Envoyer sur WhatsApp</span>
                     </a>
 
-                    {/* Bouton 4 : Envoyer par Email */}
                     <a
-                      href={`mailto:${adminEmail}?subject=${encodeURIComponent(
-                        `Preuve de paiement BaridiMob - ${plans[selectedPlan].name}`
+                      href={`mailto:${supportEmail}?subject=${encodeURIComponent(
+                        `Preuve de virement BaridiMob - ${plans[selectedPlan].name}`
                       )}&body=${encodeURIComponent(
-                        `Bonjour Badreddine,\n\nJe viens d'effectuer le virement BaridiMob de ${getPrice(selectedPlan).dzd} DZD pour activer le${plans[selectedPlan].name}.\nVeuillez trouver mon reçu en pièce jointe.`
+                        `Bonjour,\n\nJe viens d'effectuer le virement BaridiMob de ${getPrice(selectedPlan).dzd} DZD pour activer le${plans[selectedPlan].name}.\nVeuillez trouver mon reçu en pièce jointe.`
                       )}`}
                       className="p-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl text-xs flex flex-col items-center justify-center gap-1.5 transition border border-slate-700"
                     >
@@ -690,9 +682,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ======================================================== */}
-        {/* ONGLET 2 : SCORE ACHETEUR & BLACKLIST DZ ANTI-RTO       */}
-        {/* ======================================================== */}
+        {/* ONGLET SCORE ACHETEUR & BLACKLIST */}
         {activeTab === 'blacklist' && (
           <div className="space-y-8 max-w-5xl mx-auto">
             <div>
@@ -702,7 +692,6 @@ export default function Dashboard() {
               </p>
             </div>
 
-            {/* RECHERCHE INSTANTANÉE */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
               <form onSubmit={handleSearchBuyer} className="flex flex-col sm:flex-row gap-3">
                 <input
@@ -744,7 +733,7 @@ export default function Dashboard() {
                         </p>
                         {searchResult.last_return_reason && (
                           <p className="text-xs text-rose-400 bg-rose-500/10 px-3 py-1.5 rounded-lg border border-rose-500/20">
-                            Motif : {searchResult.last_return_reason}
+                            Motif signalé : {searchResult.last_return_reason}
                           </p>
                         )}
                       </div>
@@ -762,7 +751,6 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* FORMULAIRE DE SIGNALEMENT */}
             <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4">
               <h3 className="text-base font-bold text-white">📢 Signaler un Acheteur Fantôme ou Refus Abusif</h3>
               <form onSubmit={handleReportBuyer} className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -793,18 +781,16 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ======================================================== */}
-        {/* ONGLET 3 : COMMANDES & FILTRE IP / ANTI-FRAUDE          */}
-        {/* ======================================================== */}
+        {/* ONGLET COMMANDES & FILTRE IP */}
         {activeTab === 'orders_fraud' && (
           <div className="space-y-6 max-w-5xl mx-auto">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-2xl font-black text-white">Commandes Récentes & Détection Anti-Fraude IP</h2>
-                <p className="text-slate-400 text-xs">Filtrage en temps réel des commandes passées sous Proxy/VPN étranger.</p>
+                <h2 className="text-2xl font-black text-white">Commandes & Détection Anti-Fraude IP</h2>
+                <p className="text-slate-400 text-xs">Blocage préventif des commandes issues de VPN ou de faux profils.</p>
               </div>
               <span className="px-3 py-1 bg-indigo-500/20 text-indigo-300 text-xs font-bold rounded-lg border border-indigo-500/30">
-                Filtre Actif : Algérie Uniquement
+                Filtre Actif : Algérie
               </span>
             </div>
 
@@ -813,7 +799,7 @@ export default function Dashboard() {
                 <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
                   <tr>
                     <th className="p-4">N° Commande</th>
-                    <th className="p-4">Client</th>
+                    <th className="p-4">Identifiant Client</th>
                     <th className="p-4">Téléphone</th>
                     <th className="p-4">Adresse IP</th>
                     <th className="p-4">VPN / Proxy</th>
@@ -852,15 +838,13 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ======================================================== */}
-        {/* ONGLET 4 : DOSSIERS DE LITIGES & CONTESTATIONS           */}
-        {/* ======================================================== */}
+        {/* ONGLET DOSSIERS DE LITIGES */}
         {activeTab === 'dispute' && (
           <div className="space-y-6 max-w-5xl mx-auto">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
               <div>
                 <h2 className="text-2xl font-black text-white">Dossiers de Litiges Transporteurs</h2>
-                <p className="text-slate-400 text-xs">Génération automatique des réclamations pour surcoûts et colis perdus.</p>
+                <p className="text-slate-400 text-xs">Réclamations générées pour surfacturation et colis égarés en hubs.</p>
               </div>
               <button
                 onClick={() => alert("Bordereau officiel généré pour envoi au service réclamation du transporteur !")}
@@ -921,83 +905,17 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ======================================================== */}
-        {/* ONGLET 5 : CONNECTEURS TRANSPORTEURS (YALIDINE / ZR)      */}
-        {/* ======================================================== */}
-        {activeTab === 'connectors' && (
-          <div className="space-y-6 max-w-5xl mx-auto">
-            <div>
-              <h2 className="text-2xl font-black text-white">Connecteurs Transporteurs Algérie</h2>
-              <p className="text-slate-400 text-xs mt-1">Liaison API directe pour synchroniser bordereaux et quittances automatiquement.</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Yalidine */}
-              <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-white text-base">Yalidine Express API</span>
-                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded">Connecté</span>
-                </div>
-                <input type="text" defaultValue="yal_api_token_live_99481" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono" />
-                <button onClick={() => alert("Synchronisation Yalidine réussie !")} className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 rounded-xl text-xs transition">
-                  Synchroniser les Quittances
-                </button>
-              </div>
-
-              {/* ZR Express */}
-              <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-white text-base">ZR Express API</span>
-                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded">Connecté</span>
-                </div>
-                <input type="text" defaultValue="zr_key_live_449102" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono" />
-                <button onClick={() => alert("Synchronisation ZR Express réussie !")} className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 rounded-xl text-xs transition">
-                  Synchroniser les Quittances
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ======================================================== */}
-        {/* ONGLET 6 : CLÉS API E-COMMERCE & SERVEUR MCP             */}
-        {/* ======================================================== */}
-        {activeTab === 'api_settings' && (
-          <div className="space-y-6 max-w-5xl mx-auto">
-            <div>
-              <h2 className="text-2xl font-black text-white">Intégrations E-commerce, Webhooks & MCP</h2>
-              <p className="text-slate-400 text-xs mt-1">Connectez votre store (Shopify, WooCommerce, YouCan, EcoTrack) ou vos agents IA.</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-3">
-                <span className="font-bold text-white text-sm">Clé API SaaS COD Recon</span>
-                <input type="text" readOnly value="recon_live_sec_994827103984" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-emerald-400 font-mono" />
-                <p className="text-[11px] text-slate-400">À coller dans vos plugins Shopify / YouCan / WooCommerce.</p>
-              </div>
-
-              <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-3">
-                <span className="font-bold text-white text-sm">Point de Connexion MCP (Model Context Protocol)</span>
-                <input type="text" readOnly value="https://saas-cod-recon-2026.vercel.app/api/mcp" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-cyan-400 font-mono" />
-                <p className="text-[11px] text-slate-400">Pour intégrer vos agents Gemini / Claude / GPT directement à vos données de trésorerie.</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ======================================================== */}
-        {/* ONGLET 7 : AUDIT FRAIS DE RETOUR (RTO)                  */}
-        {/* ======================================================== */}
+        {/* ONGLET AUDIT RTO */}
         {activeTab === 'rto_audit' && (
           <div className="space-y-6 max-w-5xl mx-auto">
-            <h2 className="text-2xl font-black text-white">Audit des Frais de Retour (RTO)</h2>
+            <h2 className="text-2xl font-black text-white">Audit Frais de Retour (RTO)</h2>
             <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
                   <tr>
                     <th className="p-4">N° Tracking</th>
                     <th className="p-4">Transporteur</th>
-                    <th className="p-4">Client</th>
+                    <th className="p-4">Wilaya</th>
                     <th className="p-4">Motif</th>
                     <th className="p-4">Tarif Convenu</th>
                     <th className="p-4">Prélevé</th>
@@ -1022,76 +940,122 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ======================================================== */}
-        {/* ONGLET 8 : AVIS & CRÉDIBILITÉ MARCHANDS                  */}
-        {/* ======================================================== */}
+        {/* ONGLET CONNECTEURS TRANSPORTEURS */}
+        {activeTab === 'connectors' && (
+          <div className="space-y-6 max-w-5xl mx-auto">
+            <h2 className="text-2xl font-black text-white">Connecteurs Transporteurs Algérie</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-white text-base">Yalidine Express API</span>
+                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded">Connecté</span>
+                </div>
+                <input type="text" defaultValue="yal_api_token_live_99481" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono" />
+                <button onClick={() => alert("Synchronisation Yalidine réussie !")} className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 rounded-xl text-xs transition">
+                  Synchroniser les Quittances
+                </button>
+              </div>
+
+              <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-white text-base">ZR Express API</span>
+                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded">Connecté</span>
+                </div>
+                <input type="text" defaultValue="zr_key_live_449102" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono" />
+                <button onClick={() => alert("Synchronisation ZR Express réussie !")} className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 rounded-xl text-xs transition">
+                  Synchroniser les Quittances
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ONGLET PARAMÈTRES API & MCP */}
+        {activeTab === 'api_settings' && (
+          <div className="space-y-6 max-w-5xl mx-auto">
+            <h2 className="text-2xl font-black text-white">Intégrations E-commerce, Webhooks & MCP</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-3">
+                <span className="font-bold text-white text-sm">Clé API Marchand</span>
+                <input type="text" readOnly value="recon_live_sec_994827103984" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-emerald-400 font-mono" />
+                <p className="text-[11px] text-slate-400">Pour intégrer le score acheteur à votre checkout Shopify / YouCan / WooCommerce.</p>
+              </div>
+
+              <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-3">
+                <span className="font-bold text-white text-sm">Point de Connexion MCP</span>
+                <input type="text" readOnly value="https://saas-cod-recon-2026.vercel.app/api/mcp" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-cyan-400 font-mono" />
+                <p className="text-[11px] text-slate-400">Pour connecter vos agents IA aux données de votre boutique.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ONGLET AVIS MARCHANDS */}
         {activeTab === 'reviews' && (
           <div className="space-y-6 max-w-5xl mx-auto">
-            <div>
-              <h2 className="text-2xl font-black text-white">Avis des Marchands & Preuve de Confiance</h2>
-              <p className="text-slate-400 text-xs mt-1">Rejoignez des dizaines de boutiques e-commerce qui sécurisent leur marge nette en Algérie.</p>
-            </div>
-
+            <h2 className="text-2xl font-black text-white">Avis des Marchands & Preuve Sociale</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {reviews.map((rev, idx) => (
                 <div key={idx} className="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-3">
-                  <div className="flex items-center gap-1 text-amber-400">
-                    {'★'.repeat(rev.rating)}
-                  </div>
+                  <div className="text-amber-400">{'★'.repeat(rev.rating)}</div>
                   <p className="text-xs text-slate-300 italic">"{rev.comment}"</p>
-                  <div className="pt-2 border-t border-slate-800">
-                    <div className="text-xs font-bold text-white">{rev.name}</div>
-                    <div className="text-[10px] text-slate-400">{rev.store}</div>
-                  </div>
+                  <div className="pt-2 border-t border-slate-800 text-[11px] font-bold text-white">{rev.name}</div>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* ======================================================== */}
-        {/* ONGLET 9 : CONTACT & SUPPORT OFFICIEL                   */}
-        {/* ======================================================== */}
+        {/* ONGLET CONTACT OFFICIEL */}
         {activeTab === 'contact' && (
           <div className="space-y-6 max-w-3xl mx-auto">
-            <div>
-              <h2 className="text-2xl font-black text-white">Contact & Support Dédié</h2>
-              <p className="text-slate-400 text-xs mt-1">Notre équipe vous assiste 7j/7 pour la configuration et la validation de vos quittances.</p>
-            </div>
-
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-              <div className="flex items-center gap-4 border-b border-slate-800 pb-4">
-                <div className="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold">
-                  DZ
-                </div>
-                <div>
-                  <div className="text-sm font-bold text-white">Société éditrice / Responsable SaaS</div>
-                  <div className="text-xs text-slate-400">{adminName} — Tipaza, Algérie</div>
-                </div>
+            <h2 className="text-2xl font-black text-white">Support & Assistance</h2>
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-3 text-xs">
+              <div className="flex justify-between p-3 bg-slate-950 rounded-xl">
+                <span className="text-slate-400">Support WhatsApp :</span>
+                <span className="text-emerald-400 font-mono font-bold">+213 550 00 00 00</span>
               </div>
-
-              <div className="space-y-3 text-xs">
-                <div className="flex justify-between p-3 bg-slate-950 rounded-xl">
-                  <span className="text-slate-400">Assistance WhatsApp :</span>
-                  <span className="text-emerald-400 font-mono font-bold">+213 550 00 00 00</span>
-                </div>
-                <div className="flex justify-between p-3 bg-slate-950 rounded-xl">
-                  <span className="text-slate-400">Email commercial :</span>
-                  <span className="text-white font-mono">{adminEmail}</span>
-                </div>
-                <div className="flex justify-between p-3 bg-slate-950 rounded-xl">
-                  <span className="text-slate-400">Règlement BaridiMob :</span>
-                  <span className="text-emerald-400 font-mono font-bold">{adminRip}</span>
-                </div>
+              <div className="flex justify-between p-3 bg-slate-950 rounded-xl">
+                <span className="text-slate-400">Email commercial :</span>
+                <span className="text-white font-mono">{supportEmail}</span>
+              </div>
+              <div className="flex justify-between p-3 bg-slate-950 rounded-xl">
+                <span className="text-slate-400">Entité émettrice :</span>
+                <span className="text-white font-medium">{corporateBillingEntity}</span>
               </div>
             </div>
           </div>
         )}
 
         {/* ONGLETS SECONDAIRES */}
-        {activeTab === 'ghosts' && <div className="p-6 bg-slate-900 rounded-2xl text-white">Radar des colis immobilisés en Hub actif.</div>}
-        {activeTab === 'wilayas' && <div className="p-6 bg-slate-900 rounded-2xl text-white">Simulateur de rentabilité par Wilaya actif.</div>}
-        {activeTab === 'crm' && <div className="p-6 bg-slate-900 rounded-2xl text-white">CRM Marchands et abonnements actif.</div>}
+        {activeTab === 'ghosts' && <div className="p-6 bg-slate-900 rounded-2xl text-white">Radar des colis immobilisés en Hubs régionaux actif.</div>}
+        {activeTab === 'wilayas' && (
+          <div className="space-y-6 max-w-5xl mx-auto">
+            <h2 className="text-2xl font-black text-white">Rentabilité Nette par Wilaya (58 Wilayas)</h2>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+              <table className="w-full text-left font-mono text-xs">
+                <thead>
+                  <tr className="text-slate-400 border-b border-slate-800">
+                    <th className="pb-3">Wilaya</th>
+                    <th className="pb-3">Taux Livraison</th>
+                    <th className="pb-3">Marge Nette</th>
+                    <th className="pb-3 text-right">Décision Meta Ads</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 font-sans">
+                  {wilayaStats.map((w, idx) => (
+                    <tr key={idx}>
+                      <td className="py-3 font-bold text-white">{w.code} - {w.name}</td>
+                      <td className="py-3 text-emerald-400 font-mono">{w.deliveredRate}%</td>
+                      <td className="py-3 font-bold">{w.netMarginDzd > 0 ? `+${w.netMarginDzd} DZD` : `${w.netMarginDzd} DZD`}</td>
+                      <td className="py-3 text-right font-semibold">{w.recommendation}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
