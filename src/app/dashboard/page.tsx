@@ -82,12 +82,14 @@ export default function Dashboard() {
 
   const [copySuccess, setCopySuccess] = useState(false);
 
+  // ENTITÉ PROFESSIONNELLE ET COORDONNÉES RÉELLES D'ENCAISSEMENT
   const corporateBillingEntity = "COD Reconciliation DZ — Service Comptabilité & Licences";
   const billingRip = "00799999000232882074";
-  const supportWhatsAppNumber = "213550000000";
-  const supportEmail = "contact@reconciliation-dz.com";
+  const supportWhatsAppDisplay = "0699 00 00 82";
+  const supportWhatsAppNumber = "213699000082";
+  const supportEmail = "weekyfy@gmail.com";
 
-  // SÉLECTEUR CYCLE DE FACTURATION (POINT 3)
+  // SÉLECTEUR CYCLE DE FACTURATION
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'business' | 'ultra'>('business');
 
@@ -614,7 +616,7 @@ export default function Dashboard() {
       </aside>
 
       <main className="flex-1 p-6 md:p-8 overflow-y-auto">
-        {/* ONGLET 1 : IMPORTATION CSV */}
+        {/* ONGLET IMPORT CSV */}
         {activeTab === 'import_csv' && (
           <div className="space-y-6 max-w-6xl mx-auto pt-2">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -743,7 +745,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET 2 : FACTURATION & RÈGLEMENTS (POINT 3 : SÉLECTEUR ANNUEL & FEEDBACK BOUTON COPIER) */}
+        {/* ONGLET FACTURATION (AVEC WHATSAPP DIRECT 0699000082 ET EMAIL WEEKYFY@GMAIL.COM) */}
         {activeTab === 'billing' && (
           <div className="space-y-8 max-w-5xl mx-auto pt-4">
             <div className="text-center max-w-2xl mx-auto space-y-2">
@@ -755,7 +757,7 @@ export default function Dashboard() {
                 Activez votre accès instantanément via virement BaridiMob ou par capture de reçu.
               </p>
 
-              {/* COMMUTATEUR MENSUEL / ANNUEL INTERACTIF (POINT 3) */}
+              {/* COMMUTATEUR MENSUEL / ANNUEL INTERACTIF */}
               <div className="pt-4 flex items-center justify-center gap-3">
                 <button
                   type="button"
@@ -786,9 +788,8 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* CARTES DES FORFAITS AVEC PRIX DYNAMIQUES */}
+            {/* CARTES DES FORFAITS */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* PACK DÉCOUVERTE */}
               <div
                 onClick={() => setSelectedPlan('free')}
                 className={`p-6 rounded-3xl border cursor-pointer transition ${
@@ -808,7 +809,6 @@ export default function Dashboard() {
                 </ul>
               </div>
 
-              {/* PACK BUSINESS 2 000 DZD / MOIS ou 21 600 DZD / AN */}
               <div
                 onClick={() => setSelectedPlan('business')}
                 className={`p-6 rounded-3xl border cursor-pointer relative transition ${
@@ -835,7 +835,6 @@ export default function Dashboard() {
                 </ul>
               </div>
 
-              {/* PACK ULTRA */}
               <div
                 onClick={() => setSelectedPlan('ultra')}
                 className={`p-6 rounded-3xl border cursor-pointer transition ${
@@ -860,7 +859,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* CADRE OFFICIEL DE RÈGLEMENT (POINT 3) */}
+            {/* CADRE OFFICIEL DE RÈGLEMENT */}
             {selectedPlan !== 'free' && (
               <div className="bg-slate-900 border-2 border-emerald-500 rounded-3xl p-6 md:p-8 space-y-6 shadow-2xl">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-5">
@@ -885,7 +884,6 @@ export default function Dashboard() {
                     <span className="text-[11px] text-emerald-400">Compte vérifié Algérie Poste</span>
                   </div>
 
-                  {/* BOUTON COPIER AVEC FEEDBACK EN DIRECT (POINT 3) */}
                   <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
                     <span className="text-xs text-slate-400">Numéro RIP BaridiMob (20 chiffres) :</span>
                     <div className="flex items-center justify-between bg-slate-900 p-2.5 rounded-xl border border-slate-800">
@@ -905,7 +903,7 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* TRANSMISSION DES JUSTIFICATIFS */}
+                {/* TRANSMISSION DES JUSTIFICATIFS BARIDIMOB */}
                 <div className="space-y-4 pt-2">
                   <h4 className="text-sm font-bold text-white uppercase tracking-wider">
                     Transmettre votre preuve de règlement :
@@ -960,9 +958,10 @@ export default function Dashboard() {
                       <span>Prendre en Photo</span>
                     </button>
 
+                    {/* LIEN DIRECT WHATSAPP : 0699000082 */}
                     <a
                       href={`https://wa.me/${supportWhatsAppNumber}?text=${encodeURIComponent(
-                        `Bonjour, j'ai effectué le virement BaridiMob de ${getPrice(selectedPlan).dzd.toLocaleString()} DZD pour le ${plans[selectedPlan].name} (${billingCycle === 'yearly' ? 'Formule Annuelle -10%' : 'Formule Mensuelle'}). Voici mon justificatif.`
+                        `Bonjour, j'ai effectué le virement BaridiMob de ${getPrice(selectedPlan).dzd.toLocaleString()} DZD pour le ${plans[selectedPlan].name} (${billingCycle === 'yearly' ? 'Formule Annuelle -10%' : 'Formule Mensuelle'}). Voici la capture d'écran de ma quittance pour activation de ma licence.`
                       )}`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -972,11 +971,12 @@ export default function Dashboard() {
                       <span>Envoyer sur WhatsApp</span>
                     </a>
 
+                    {/* LIEN DIRECT EMAIL : weekyfy@gmail.com */}
                     <a
                       href={`mailto:${supportEmail}?subject=${encodeURIComponent(
                         `Preuve de virement BaridiMob - ${plans[selectedPlan].name}`
                       )}&body=${encodeURIComponent(
-                        `Bonjour,\n\nJe viens d'effectuer le virement BaridiMob de ${getPrice(selectedPlan).dzd.toLocaleString()} DZD pour activer le ${plans[selectedPlan].name}.\nVeuillez trouver ma quittance en pièce jointe.`
+                        `Bonjour,\n\nJe viens d'effectuer le virement BaridiMob de ${getPrice(selectedPlan).dzd.toLocaleString()} DZD pour activer le ${plans[selectedPlan].name} (${billingCycle === 'yearly' ? 'Annuel' : 'Mensuel'}).\nVeuillez trouver ma quittance en pièce jointe.`
                       )}`}
                       className="p-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl text-xs flex flex-col items-center justify-center gap-1.5 transition border border-slate-700"
                     >
@@ -990,7 +990,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET 3 : LITIGES */}
+        {/* ONGLET LITIGES */}
         {activeTab === 'dispute' && (
           <div className="space-y-6 max-w-5xl mx-auto pt-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800/80 pb-5">
@@ -1046,7 +1046,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET 4 : SCORE ACHETEUR */}
+        {/* ONGLET SCORE ACHETEUR */}
         {activeTab === 'blacklist' && (
           <div className="space-y-8 max-w-5xl mx-auto pt-4">
             <div className="border-b border-slate-800/80 pb-5">
@@ -1145,7 +1145,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET 5 : COMMANDES FRAUDE */}
+        {/* ONGLET COMMANDES & FILTRE IP */}
         {activeTab === 'orders_fraud' && (
           <div className="space-y-6 max-w-6xl mx-auto pt-2">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -1255,7 +1255,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET 6 : WILAYAS */}
+        {/* ONGLET WILAYAS */}
         {activeTab === 'wilayas' && (
           <div className="space-y-6 max-w-6xl mx-auto pt-2">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -1356,7 +1356,7 @@ export default function Dashboard() {
                         }`}>
                           {w.recommendation === 'SCALE_ADS' && '🚀 SCALER ADS'}
                           {w.recommendation === 'HEALTHY' && '✓ STABLE'}
-                          {w.recommendation === 'REQUIRE_DEPOSIT' && '⚠️️ EXIGER ACOMPTE'}
+                          {w.recommendation === 'REQUIRE_DEPOSIT' && '⚠️ EXIGER ACOMPTE'}
                           {w.recommendation === 'EXCLUDE_ADS' && '⛔ EXCLURE ADS'}
                         </span>
                       </td>
@@ -1368,7 +1368,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET 7 : GHOSTS */}
+        {/* ONGLET GHOSTS */}
         {activeTab === 'ghosts' && (
           <div className="space-y-6 max-w-6xl mx-auto pt-2">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -1434,7 +1434,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET 8 : CONNECTEURS */}
+        {/* ONGLET CONNECTEURS */}
         {activeTab === 'connectors' && (
           <div className="space-y-6 max-w-5xl mx-auto pt-2">
             <div>
@@ -1549,7 +1549,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET 9 : INTEGRATIONS */}
+        {/* ONGLET INTÉGRATIONS */}
         {activeTab === 'api_settings' && (
           <div className="space-y-6 max-w-5xl mx-auto pt-2">
             <div>
@@ -1597,20 +1597,33 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET 10 : SUPPORT */}
+        {/* ONGLET 10 : SUPPORT (AVEC 0699000082 ET WEEKYFY@GMAIL.COM) */}
         {activeTab === 'contact' && (
           <div className="space-y-6 max-w-3xl mx-auto pt-2">
             <h2 className="text-2xl font-black text-white">Support & Assistance</h2>
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-3 text-xs">
-              <div className="flex justify-between p-3 bg-slate-950 rounded-xl">
-                <span className="text-slate-400">Support WhatsApp :</span>
-                <span className="text-emerald-400 font-mono font-bold">+213 550 00 00 00</span>
+              <div className="flex justify-between items-center p-3.5 bg-slate-950 rounded-xl border border-slate-800/80">
+                <span className="text-slate-400">Support WhatsApp Officiel :</span>
+                <a
+                  href={`https://wa.me/${supportWhatsAppNumber}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald-400 font-mono font-bold hover:underline flex items-center gap-1.5"
+                >
+                  <span>💬</span>
+                  <span>+213 {supportWhatsAppDisplay}</span>
+                </a>
               </div>
-              <div className="flex justify-between p-3 bg-slate-950 rounded-xl">
-                <span className="text-slate-400">Email commercial :</span>
-                <span className="text-white font-mono">{supportEmail}</span>
+              <div className="flex justify-between items-center p-3.5 bg-slate-950 rounded-xl border border-slate-800/80">
+                <span className="text-slate-400">Email commercial & quittances :</span>
+                <a
+                  href={`mailto:${supportEmail}`}
+                  className="text-white font-mono hover:text-emerald-400 transition"
+                >
+                  {supportEmail}
+                </a>
               </div>
-              <div className="flex justify-between p-3 bg-slate-950 rounded-xl">
+              <div className="flex justify-between items-center p-3.5 bg-slate-950 rounded-xl border border-slate-800/80">
                 <span className="text-slate-400">Entité émettrice :</span>
                 <span className="text-white font-medium">{corporateBillingEntity}</span>
               </div>
