@@ -260,7 +260,26 @@ export default function Dashboard() {
     document.body.removeChild(link);
   };
 
-  // DONNÉES P&L WILAYAS & DÉCISIONS META ADS (MODULE 3)
+  // Télécharger un fichier exemple de test Yalidine / ZR
+  const downloadSampleCsv = () => {
+    const sampleContent = `Tracking,Destinataire,Wilaya,Frais_Preleves_DZD,Statut\n` +
+      `yal_test_448102,Karim Benali,Alger (16),550,Retour Client Injoignable\n` +
+      `yal_test_448103,Samir Amrani,Oran (31),250,Retour Conforme\n` +
+      `zr_test_881920,Lydia Saidi,Tizi Ouzou (15),650,Retour Faux Numero\n` +
+      `zr_test_881921,Farid Khelifi,Setif (19),700,Client Absent\n` +
+      `yal_test_448104,Yasmine Brahim,Blida (09),250,Retour Refus Conforme\n`;
+    
+    const blob = new Blob([sampleContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `exemple_quittance_yalidine_zr.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // DONNÉES P&L WILAYAS & DÉCISIONS META ADS
   const [wilayaFilter, setWilayaFilter] = useState<'ALL' | 'SCALE' | 'EXCLUDE'>('ALL');
   const wilayaStats: WilayaProfitability[] = [
     { code: "16", name: "Alger", totalShipped: 185, deliveredCount: 168, rtoCount: 17, deliveredRate: 90.8, grossSalesDzd: 890000, deliveryFeesDzd: 67200, rtoLossDzd: 6800, netMarginDzd: 384000, recommendation: "SCALE_ADS" },
@@ -279,7 +298,7 @@ export default function Dashboard() {
     return true;
   });
 
-  // RADAR DES COLIS BLOQUÉS / GHOSTS (+7 JOURS EN HUB) (MODULE 3)
+  // RADAR DES COLIS BLOQUÉS / GHOSTS (+7 JOURS EN HUB)
   const [ghostParcels, setGhostParcels] = useState<GhostParcel[]>([
     { tracking: "yal_dz_9981023", carrier: "Yalidine Express", customerName: "Boutique Sud Tech", wilaya: "Ghardaïa (47)", hubLocation: "Hub Régional Ghardaïa", daysStuck: 12, codAmountDzd: 18500, status: "IMMOBILISE" },
     { tracking: "zr_hub_441092", carrier: "ZR Express", customerName: "Client Biskra", wilaya: "Biskra (07)", hubLocation: "Centre de Tri Biskra", daysStuck: 9, codAmountDzd: 7400, status: "IMMOBILISE" },
@@ -291,14 +310,13 @@ export default function Dashboard() {
     alert(`Dossier de réclamation perte/vol transmis pour le colis ${tracking} !`);
   };
 
-  // COMMANDES EN TEMPS RÉEL & DÉTECTION FRAUDE IP / VPN (MODULE 4)
+  // COMMANDES EN TEMPS RÉEL & DÉTECTION FRAUDE IP / VPN
   const [fraudOrders, setFraudOrders] = useState<OrderFraudItem[]>([
     { orderId: "CMD-9941", customerName: "Karim Brahimi (Alger)", phone: "0770123984", ipAddress: "105.101.42.18 (Mobilis)", isVpn: false, score: 95, status: "APPROUVE" },
     { orderId: "CMD-9942", customerName: "Spam Bot / Fake", phone: "0661234567", ipAddress: "185.220.101.5 (Tor/VPN)", isVpn: true, score: 15, status: "BLOQUE" },
     { orderId: "CMD-9943", customerName: "Yacine M. (Oran)", phone: "0550482914", ipAddress: "41.107.82.90 (Djezzy)", isVpn: false, score: 68, status: "SUSPECT" }
   ]);
 
-  // Simulation test d'envoi webhook
   const handleSimulateWebhook = async (type: 'legit' | 'fraud') => {
     const payload = type === 'legit' ? {
       order_id: `CMD-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -328,6 +346,18 @@ export default function Dashboard() {
     } catch (e) {
       alert("Erreur webhook");
     }
+  };
+
+  // GESTION DES CLÉS TRANSPORTEURS (CONNECTEURS)
+  const [yalId, setYalId] = useState('yal_id_44920');
+  const [yalToken, setYalToken] = useState('yal_tok_live_77189034');
+  const [zrKey, setZrKey] = useState('zr_key_live_990142');
+  const [zrSecret, setZrSecret] = useState('zr_sec_8849103847');
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+  const handleTestConnector = (carrier: 'Yalidine' | 'ZR Express') => {
+    setSyncMessage(`Connexion API réussie à ${carrier} ! Vos colis et bordereaux sont synchronisés.`);
+    setTimeout(() => setSyncMessage(null), 4000);
   };
 
   // Score Acheteur Anti-RTO
@@ -529,7 +559,7 @@ export default function Dashboard() {
               <span className="px-1.5 py-0.5 text-[9px] bg-emerald-500/20 text-emerald-300 rounded font-bold">BaridiMob</span>
             </button>
 
-            <div className="pt-3 px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Intégrations & Webhooks</div>
+            <div className="pt-3 px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Intégrations & Passerelles</div>
 
             <button
               onClick={() => setActiveTab('connectors')}
@@ -538,6 +568,7 @@ export default function Dashboard() {
               }`}
             >
               <span className="flex items-center gap-2">🚚 Connecteurs Yalidine / ZR</span>
+              <span className="px-1.5 py-0.5 text-[9px] bg-blue-500 text-white rounded font-bold">API</span>
             </button>
 
             <button
@@ -580,16 +611,26 @@ export default function Dashboard() {
         {/* ONGLET 1 : IMPORTATION CSV */}
         {activeTab === 'import_csv' && (
           <div className="space-y-6 max-w-6xl mx-auto">
-            <div>
-              <span className="text-xs bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
-                Moteur d'Audit Automatisé
-              </span>
-              <h1 className="text-3xl font-extrabold text-white tracking-tight mt-2">
-                Importateur & Analyseur de Quittances de Versement
-              </h1>
-              <p className="text-slate-400 text-xs mt-1">
-                Déposez votre bordereau (Yalidine, ZR Express, EcoTrack) pour identifier instantanément les surfacturations.
-              </p>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div>
+                <span className="text-xs bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                  Moteur d'Audit Automatisé
+                </span>
+                <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
+                  Importateur & Analyseur de Quittances de Versement
+                </h1>
+                <p className="text-slate-400 text-xs mt-1">
+                  Déposez votre bordereau (Yalidine, ZR Express, EcoTrack) pour identifier instantanément les surfacturations.
+                </p>
+              </div>
+
+              {/* Bouton pour télécharger un exemple CSV */}
+              <button
+                onClick={downloadSampleCsv}
+                className="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2"
+              >
+                <span>📥</span> Télécharger Exemple CSV Yalidine/ZR
+              </button>
             </div>
 
             <div
@@ -697,7 +738,124 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET 2 : COMMANDES EN DIRECT & FILTRE IP / VPN (MODULE 4) */}
+        {/* ONGLET 2 : CONNECTEURS YALIDINE & ZR EXPRESS AVEC SYNC API */}
+        {activeTab === 'connectors' && (
+          <div className="space-y-6 max-w-5xl mx-auto">
+            <div>
+              <span className="text-xs bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                Passerelles Transporteurs Directes
+              </span>
+              <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
+                Synchronisation Yalidine & ZR Express
+              </h1>
+              <p className="text-slate-400 text-xs mt-1">
+                Connectez vos comptes d'expédition pour auditer automatiquement vos bordereaux sans téléchargement manuel de fichiers.
+              </p>
+            </div>
+
+            {syncMessage && (
+              <div className="p-4 bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs rounded-2xl font-bold">
+                {syncMessage}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* CONNECTEUR YALIDINE */}
+              <div className="p-6 bg-slate-900 border border-slate-800 rounded-3xl space-y-4 shadow-xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-black text-white text-base">
+                      YAL
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-white text-base">Yalidine Express API</h3>
+                      <span className="text-[10px] text-emerald-400 font-semibold">Service Web V1 & V2</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono font-bold">
+                    Connecté
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[11px] text-slate-400 block mb-1">API ID (Yalidine) :</label>
+                    <input
+                      type="text"
+                      value={yalId}
+                      onChange={(e) => setYalId(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-slate-400 block mb-1">API Token :</label>
+                    <input
+                      type="password"
+                      value={yalToken}
+                      onChange={(e) => setYalToken(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleTestConnector('Yalidine')}
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow"
+                >
+                  🔄 Tester & Synchroniser les Quittances
+                </button>
+              </div>
+
+              {/* CONNECTEUR ZR EXPRESS */}
+              <div className="p-6 bg-slate-900 border border-slate-800 rounded-3xl space-y-4 shadow-xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-600 flex items-center justify-center font-black text-white text-base">
+                      ZR
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-white text-base">ZR Express API</h3>
+                      <span className="text-[10px] text-amber-400 font-semibold">Passerelle Marchand Pro</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded font-mono font-bold">
+                    Actif
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[11px] text-slate-400 block mb-1">API Key :</label>
+                    <input
+                      type="text"
+                      value={zrKey}
+                      onChange={(e) => setZrKey(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-slate-400 block mb-1">Secret Token :</label>
+                    <input
+                      type="password"
+                      value={zrSecret}
+                      onChange={(e) => setZrSecret(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleTestConnector('ZR Express')}
+                  className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow"
+                >
+                  🔄 Tester & Synchroniser les Quittances
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ONGLET COMMANDES & FILTRE IP */}
         {activeTab === 'orders_fraud' && (
           <div className="space-y-6 max-w-6xl mx-auto">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -713,7 +871,6 @@ export default function Dashboard() {
                 </p>
               </div>
 
-              {/* BOUTONS DE TEST RAPIDE */}
               <div className="flex gap-2">
                 <button
                   onClick={() => handleSimulateWebhook('legit')}
@@ -730,7 +887,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* CARTES STATS */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
                 <span className="text-xs text-slate-400">Commandes Saines Approuvées</span>
@@ -755,7 +911,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* TABLEAU DES COMMANDES EN DIRECT */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
@@ -810,7 +965,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET 3 : P&L WILAYAS & RECOMMANDATIONS META ADS */}
+        {/* ONGLET WILAYAS */}
         {activeTab === 'wilayas' && (
           <div className="space-y-6 max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -923,7 +1078,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET 4 : RADAR DES COLIS BLOQUÉS EN HUBS */}
+        {/* ONGLET RADAR GHOSTS */}
         {activeTab === 'ghosts' && (
           <div className="space-y-6 max-w-6xl mx-auto">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -1166,6 +1321,7 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* ONGLET FACTURATION */}
         {activeTab === 'billing' && (
           <div className="space-y-8 max-w-5xl mx-auto">
             <div className="text-center max-w-2xl mx-auto space-y-2">
@@ -1382,24 +1538,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {activeTab === 'connectors' && (
-          <div className="space-y-6 max-w-5xl mx-auto">
-            <h2 className="text-2xl font-black text-white">Connecteurs Transporteurs Algérie</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-3">
-                <span className="font-bold text-white text-base">Yalidine Express API</span>
-                <input type="text" defaultValue="yal_api_token_live_99481" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono" />
-                <button onClick={() => alert("Synchronisation Yalidine réussie !")} className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 rounded-xl text-xs transition">Synchroniser</button>
-              </div>
-              <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-3">
-                <span className="font-bold text-white text-base">ZR Express API</span>
-                <input type="text" defaultValue="zr_key_live_449102" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono" />
-                <button onClick={() => alert("Synchronisation ZR Express réussie !")} className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 rounded-xl text-xs transition">Synchroniser</button>
-              </div>
-            </div>
-          </div>
-        )}
-
+        {/* ONGLET SUPPORT */}
         {activeTab === 'contact' && (
           <div className="space-y-6 max-w-3xl mx-auto">
             <h2 className="text-2xl font-black text-white">Support & Assistance</h2>
