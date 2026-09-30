@@ -82,13 +82,11 @@ export default function Dashboard() {
 
   const [copySuccess, setCopySuccess] = useState(false);
 
-  // ENTITÉ PROFESSIONNELLE STRICTEMENT ANONYMISÉE
   const corporateBillingEntity = "COD Reconciliation DZ — Service Comptabilité & Licences";
   const billingRip = "00799999000232882074";
   const supportWhatsAppNumber = "213550000000";
   const supportEmail = "contact@reconciliation-dz.com";
 
-  // Tarifs : Pack Business à 2 000 DZD
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'business' | 'ultra'>('business');
 
@@ -117,7 +115,6 @@ export default function Dashboard() {
     setTimeout(() => setCopySuccess(false), 2500);
   };
 
-  // Upload Supabase Reçu BaridiMob
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
@@ -166,7 +163,6 @@ export default function Dashboard() {
     }
   };
 
-  // MODULE D'IMPORTATION AUTOMATIQUE CSV/EXCEL DE QUITTANCES
   const csvFileRef = useRef<HTMLInputElement>(null);
   const [csvFileName, setCsvFileName] = useState<string | null>(null);
   const [isAuditingCsv, setIsAuditingCsv] = useState(false);
@@ -260,7 +256,6 @@ export default function Dashboard() {
     document.body.removeChild(link);
   };
 
-  // Télécharger un fichier exemple de test Yalidine / ZR
   const downloadSampleCsv = () => {
     const sampleContent = `Tracking,Destinataire,Wilaya,Frais_Preleves_DZD,Statut\n` +
       `yal_test_448102,Karim Benali,Alger (16),550,Retour Client Injoignable\n` +
@@ -279,7 +274,6 @@ export default function Dashboard() {
     document.body.removeChild(link);
   };
 
-  // DONNÉES P&L WILAYAS & DÉCISIONS META ADS
   const [wilayaFilter, setWilayaFilter] = useState<'ALL' | 'SCALE' | 'EXCLUDE'>('ALL');
   const wilayaStats: WilayaProfitability[] = [
     { code: "16", name: "Alger", totalShipped: 185, deliveredCount: 168, rtoCount: 17, deliveredRate: 90.8, grossSalesDzd: 890000, deliveryFeesDzd: 67200, rtoLossDzd: 6800, netMarginDzd: 384000, recommendation: "SCALE_ADS" },
@@ -298,7 +292,6 @@ export default function Dashboard() {
     return true;
   });
 
-  // RADAR DES COLIS BLOQUÉS / GHOSTS (+7 JOURS EN HUB)
   const [ghostParcels, setGhostParcels] = useState<GhostParcel[]>([
     { tracking: "yal_dz_9981023", carrier: "Yalidine Express", customerName: "Boutique Sud Tech", wilaya: "Ghardaïa (47)", hubLocation: "Hub Régional Ghardaïa", daysStuck: 12, codAmountDzd: 18500, status: "IMMOBILISE" },
     { tracking: "zr_hub_441092", carrier: "ZR Express", customerName: "Client Biskra", wilaya: "Biskra (07)", hubLocation: "Centre de Tri Biskra", daysStuck: 9, codAmountDzd: 7400, status: "IMMOBILISE" },
@@ -310,7 +303,6 @@ export default function Dashboard() {
     alert(`Dossier de réclamation perte/vol transmis pour le colis ${tracking} !`);
   };
 
-  // COMMANDES EN TEMPS RÉEL & DÉTECTION FRAUDE IP / VPN
   const [fraudOrders, setFraudOrders] = useState<OrderFraudItem[]>([
     { orderId: "CMD-9941", customerName: "Karim Brahimi (Alger)", phone: "0770123984", ipAddress: "105.101.42.18 (Mobilis)", isVpn: false, score: 95, status: "APPROUVE" },
     { orderId: "CMD-9942", customerName: "Spam Bot / Fake", phone: "0661234567", ipAddress: "185.220.101.5 (Tor/VPN)", isVpn: true, score: 15, status: "BLOQUE" },
@@ -348,7 +340,6 @@ export default function Dashboard() {
     }
   };
 
-  // GESTION DES CLÉS TRANSPORTEURS (CONNECTEURS)
   const [yalId, setYalId] = useState('yal_id_44920');
   const [yalToken, setYalToken] = useState('yal_tok_live_77189034');
   const [zrKey, setZrKey] = useState('zr_key_live_990142');
@@ -360,7 +351,6 @@ export default function Dashboard() {
     setTimeout(() => setSyncMessage(null), 4000);
   };
 
-  // Score Acheteur Anti-RTO
   const [searchPhone, setSearchPhone] = useState('');
   const [searchResult, setSearchResult] = useState<BuyerReputation | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
@@ -449,7 +439,6 @@ export default function Dashboard() {
     }
   };
 
-  // Données Litiges
   const [disputes] = useState<DisputeItem[]>([
     { id: "LIT-2026-001", tracking: "yal_ret_104821", carrier: "Yalidine Express", customerName: "Destinataire Boumerdès (35)", amountClaimedDzd: 350, issue: "Surfacturation retour non conforme", status: "EN_COURS", dateAdded: "28/09/2026" },
     { id: "LIT-2026-002", tracking: "zr_ret_992144", carrier: "ZR Express", customerName: "Destinataire Tizi Ouzou (15)", amountClaimedDzd: 350, issue: "Retour sans appel tracé", status: "OUVERT", dateAdded: "29/09/2026" },
@@ -458,7 +447,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans">
-      {/* SIDEBAR ABONNÉ */}
       <aside className="w-72 border-r border-slate-800 bg-slate-900/80 p-5 flex flex-col justify-between hidden md:flex shrink-0">
         <div className="space-y-6">
           <div className="flex items-center gap-2.5">
@@ -591,7 +579,6 @@ export default function Dashboard() {
           </nav>
         </div>
 
-        {/* PIED ANONYMISÉ */}
         <div className="border-t border-slate-800 pt-4 space-y-1">
           <div className="text-[11px] text-slate-400">Entité de facturation :</div>
           <div className="text-xs font-bold text-white tracking-wide">COD Reconciliation DZ</div>
@@ -606,9 +593,7 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      {/* ZONE CENTRALE */}
       <main className="flex-1 p-6 md:p-8 overflow-y-auto">
-        {/* ONGLET 1 : IMPORTATION CSV */}
         {activeTab === 'import_csv' && (
           <div className="space-y-6 max-w-6xl mx-auto">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -624,7 +609,6 @@ export default function Dashboard() {
                 </p>
               </div>
 
-              {/* Bouton pour télécharger un exemple CSV */}
               <button
                 onClick={downloadSampleCsv}
                 className="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2"
@@ -738,7 +722,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET 2 : CONNECTEURS YALIDINE & ZR EXPRESS AVEC SYNC API */}
         {activeTab === 'connectors' && (
           <div className="space-y-6 max-w-5xl mx-auto">
             <div>
@@ -760,7 +743,6 @@ export default function Dashboard() {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* CONNECTEUR YALIDINE */}
               <div className="p-6 bg-slate-900 border border-slate-800 rounded-3xl space-y-4 shadow-xl">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -806,7 +788,6 @@ export default function Dashboard() {
                 </button>
               </div>
 
-              {/* CONNECTEUR ZR EXPRESS */}
               <div className="p-6 bg-slate-900 border border-slate-800 rounded-3xl space-y-4 shadow-xl">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -855,7 +836,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET COMMANDES & FILTRE IP */}
         {activeTab === 'orders_fraud' && (
           <div className="space-y-6 max-w-6xl mx-auto">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -965,7 +945,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET WILAYAS */}
         {activeTab === 'wilayas' && (
           <div className="space-y-6 max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -1078,7 +1057,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET RADAR GHOSTS */}
         {activeTab === 'ghosts' && (
           <div className="space-y-6 max-w-6xl mx-auto">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -1144,7 +1122,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET INTÉGRATIONS SHOPIFY / YOUCAN / MCP */}
         {activeTab === 'api_settings' && (
           <div className="space-y-6 max-w-5xl mx-auto">
             <div>
@@ -1192,7 +1169,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* AUTRES ONGLETS STABLES */}
         {activeTab === 'dispute' && (
           <div className="space-y-6 max-w-5xl mx-auto">
             <div className="flex justify-between items-center">
@@ -1321,7 +1297,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET FACTURATION */}
         {activeTab === 'billing' && (
           <div className="space-y-8 max-w-5xl mx-auto">
             <div className="text-center max-w-2xl mx-auto space-y-2">
@@ -1368,7 +1343,6 @@ export default function Dashboard() {
                 </ul>
               </div>
 
-              {/* PACK BUSINESS 2 000 DZD */}
               <div
                 onClick={() => setSelectedPlan('business')}
                 className={`p-6 rounded-2xl border cursor-pointer relative transition ${
@@ -1538,7 +1512,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET SUPPORT */}
         {activeTab === 'contact' && (
           <div className="space-y-6 max-w-3xl mx-auto">
             <h2 className="text-2xl font-black text-white">Support & Assistance</h2>
