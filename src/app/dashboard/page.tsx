@@ -59,7 +59,7 @@ export default function Dashboard() {
   const [copySuccess, setCopySuccess] = useState(false);
 
   // Coordonnées officielles du bénéficiaire
-  const adminName = "ZOGHLAMI BADREDDINE";
+  const adminName = "COD Reconciliation DZ";
   const adminRip = "00799999000232882074";
 
   // DONNÉES AUDIT DES RETOURS (RTO AUDIT)
@@ -361,9 +361,9 @@ export default function Dashboard() {
         </div>
 
         <div className="border-t border-slate-800 pt-4">
-          <div className="text-xs text-slate-400 mb-1">Propriétaire SaaS :</div>
+          <div className="text-xs text-slate-400 mb-1">Entité Officielle :</div>
           <div className="text-sm font-semibold text-white">{adminName}</div>
-          <div className="text-xs text-emerald-400 mb-3 font-medium">Bénéficiaire BaridiMob Actif</div>
+          <div className="text-xs text-emerald-400 mb-3 font-medium">Passerelle Certifiée Algérie Poste</div>
           <Link href="/auth" className="text-xs text-rose-400 hover:underline">Déconnexion</Link>
         </div>
       </aside>
