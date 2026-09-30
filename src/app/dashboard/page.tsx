@@ -166,12 +166,6 @@ export default function Dashboard() {
   const csvFileRef = useRef<HTMLInputElement>(null);
   const [csvFileName, setCsvFileName] = useState<string | null>(null);
   const [isAuditingCsv, setIsAuditingCsv] = useState(false);
-  const [auditStats, setAuditStats] = useState({
-    totalRows: 4,
-    overchargedCount: 3,
-    totalOverchargedDzd: 1150,
-    totalRecoverableDzd: 1150
-  });
 
   const [rtoAudits, setRtoAudits] = useState<RtoAuditRow[]>([
     { tracking: "yal_ret_104821", carrier: "Yalidine Express", customerName: "Destinataire #1048", wilaya: "Boumerdès (35)", returnReason: "Client Injoignable", negotiatedReturnFee: 200, chargedReturnFee: 550, overchargedFee: 350, callLogVerified: false, status: "OVERCHARGED" },
@@ -179,6 +173,13 @@ export default function Dashboard() {
     { tracking: "yal_ret_104899", carrier: "Yalidine Express", customerName: "Destinataire #1048B", wilaya: "Médéa (26)", returnReason: "Refus à l'ouverture", negotiatedReturnFee: 250, chargedReturnFee: 250, overchargedFee: 0, callLogVerified: true, status: "CONFORME" },
     { tracking: "zr_ret_774012", carrier: "ZR Express", customerName: "Destinataire #7740", wilaya: "Biskra (07)", returnReason: "Client Absent", negotiatedReturnFee: 300, chargedReturnFee: 750, overchargedFee: 450, callLogVerified: false, status: "OVERCHARGED" }
   ]);
+
+  const [auditStats, setAuditStats] = useState({
+    totalRows: 4,
+    overchargedCount: 3,
+    totalOverchargedDzd: 1150,
+    totalRecoverableDzd: 1150
+  });
 
   const handleProcessCsv = (file: File) => {
     setCsvFileName(file.name);
@@ -445,6 +446,9 @@ export default function Dashboard() {
     { id: "LIT-2026-003", tracking: "yal_dz_9981023", carrier: "Yalidine Express", customerName: "Destinataire Ghardaïa (47)", amountClaimedDzd: 18500, issue: "Colis bloqué 12 jours au hub régional", status: "OUVERT", dateAdded: "25/09/2026" }
   ]);
 
+  // Compteurs dynamiques pour le menu de gauche (Point 2)
+  const suspiciousOrdersCount = fraudOrders.filter(o => o.status !== 'APPROUVE').length;
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans">
       <aside className="w-72 border-r border-slate-800 bg-slate-900/80 p-5 flex flex-col justify-between hidden md:flex shrink-0">
@@ -475,6 +479,7 @@ export default function Dashboard() {
           <nav className="space-y-1 text-xs">
             <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Moteur d'Audit & P&L</div>
 
+            {/* BADGE DYNAMIQUE QUITTANCES (POINT 2) */}
             <button
               onClick={() => setActiveTab('import_csv')}
               className={`w-full text-left px-3 py-2.5 rounded-xl font-semibold transition flex items-center justify-between ${
@@ -482,9 +487,12 @@ export default function Dashboard() {
               }`}
             >
               <span className="flex items-center gap-2">📁 Import Quittances (CSV/Excel)</span>
-              <span className="px-1.5 py-0.5 text-[9px] bg-emerald-500 text-slate-950 rounded font-bold">Audit</span>
+              <span className="px-2 py-0.5 text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-full font-bold">
+                {auditStats.overchargedCount > 0 ? `${auditStats.overchargedCount} Surfacturés` : `${auditStats.totalRows} Colis`}
+              </span>
             </button>
 
+            {/* BADGE DYNAMIQUE FRAUDE IP (POINT 2) */}
             <button
               onClick={() => setActiveTab('orders_fraud')}
               className={`w-full text-left px-3 py-2.5 rounded-xl font-semibold transition flex items-center justify-between ${
@@ -492,7 +500,9 @@ export default function Dashboard() {
               }`}
             >
               <span className="flex items-center gap-2">⚡ Commandes & Filtre IP</span>
-              <span className="px-1.5 py-0.5 text-[9px] bg-indigo-500 text-white rounded font-bold">Live</span>
+              <span className="px-1.5 py-0.5 text-[9px] bg-indigo-500 text-white rounded font-bold">
+                {suspiciousOrdersCount > 0 ? `${suspiciousOrdersCount} Suspects` : 'Live'}
+              </span>
             </button>
 
             <button
@@ -505,6 +515,7 @@ export default function Dashboard() {
               <span className="px-1.5 py-0.5 text-[9px] bg-indigo-500/20 text-indigo-300 rounded font-bold">P&L</span>
             </button>
 
+            {/* BADGE DYNAMIQUE COLIS BLOQUÉS HUBS (POINT 2) */}
             <button
               onClick={() => setActiveTab('ghosts')}
               className={`w-full text-left px-3 py-2.5 rounded-xl font-semibold transition flex items-center justify-between ${
@@ -512,9 +523,12 @@ export default function Dashboard() {
               }`}
             >
               <span className="flex items-center gap-2">🚨 Colis Bloqués en Hubs</span>
-              <span className="w-5 h-5 rounded-full bg-amber-500/30 text-amber-300 text-[10px] flex items-center justify-center font-bold">3</span>
+              <span className="w-5 h-5 rounded-full bg-amber-500/30 text-amber-300 text-[10px] flex items-center justify-center font-bold">
+                {ghostParcels.filter(g => g.status === 'IMMOBILISE').length}
+              </span>
             </button>
 
+            {/* BADGE DYNAMIQUE LITIGES (POINT 2) */}
             <button
               onClick={() => setActiveTab('dispute')}
               className={`w-full text-left px-3 py-2.5 rounded-xl font-semibold transition flex items-center justify-between ${
@@ -522,7 +536,9 @@ export default function Dashboard() {
               }`}
             >
               <span className="flex items-center gap-2">⚖️ Dossiers de Litiges</span>
-              <span className="w-5 h-5 rounded-full bg-rose-500/30 text-rose-300 text-[10px] flex items-center justify-center font-bold">3</span>
+              <span className="w-5 h-5 rounded-full bg-rose-500/30 text-rose-300 text-[10px] flex items-center justify-center font-bold">
+                {disputes.length}
+              </span>
             </button>
 
             <div className="pt-3 px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sécurité & Trésorerie</div>
@@ -533,7 +549,7 @@ export default function Dashboard() {
                 activeTab === 'blacklist' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' : 'text-slate-300 hover:bg-slate-800'
               }`}
             >
-              <span className="flex items-center gap-2">🛡️ Score Acheteur Anti-RTO</span>
+              <span className="flex items-center gap-2">🛡️️ Score Acheteur Anti-RTO</span>
               <span className="px-1.5 py-0.5 text-[9px] bg-amber-500/20 text-amber-300 rounded font-bold">DZ</span>
             </button>
 
@@ -723,7 +739,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET DOSSIERS DE LITIGES (CORRECTION BUG 1 : MARGE SUPÉRIEURE ET DÉBORDEMENT BOUTON) */}
+        {/* ONGLET 2 : DOSSIERS DE LITIGES */}
         {activeTab === 'dispute' && (
           <div className="space-y-6 max-w-5xl mx-auto pt-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800/80 pb-5">
@@ -779,7 +795,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET SCORE ACHETEUR & BLACKLIST (CORRECTION BUG 1 : MARGE SUPÉRIEURE) */}
+        {/* ONGLET 3 : SCORE ACHETEUR & BLACKLIST */}
         {activeTab === 'blacklist' && (
           <div className="space-y-8 max-w-5xl mx-auto pt-4">
             <div className="border-b border-slate-800/80 pb-5">
@@ -878,7 +894,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* AUTRES ONGLETS STABLES */}
+        {/* ONGLET 4 : COMMANDES & FILTRE IP */}
         {activeTab === 'orders_fraud' && (
           <div className="space-y-6 max-w-6xl mx-auto pt-2">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -988,6 +1004,7 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* ONGLET 5 : WILAYAS */}
         {activeTab === 'wilayas' && (
           <div className="space-y-6 max-w-6xl mx-auto pt-2">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -1100,6 +1117,7 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* ONGLET 6 : RADAR GHOSTS */}
         {activeTab === 'ghosts' && (
           <div className="space-y-6 max-w-6xl mx-auto pt-2">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -1165,6 +1183,7 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* ONGLET 7 : CONNECTEURS YALIDINE / ZR */}
         {activeTab === 'connectors' && (
           <div className="space-y-6 max-w-5xl mx-auto pt-2">
             <div>
@@ -1279,6 +1298,7 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* ONGLET 8 : SHOPIFY / YOUCAN / MCP */}
         {activeTab === 'api_settings' && (
           <div className="space-y-6 max-w-5xl mx-auto pt-2">
             <div>
@@ -1326,6 +1346,7 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* ONGLET 9 : FACTURATION */}
         {activeTab === 'billing' && (
           <div className="space-y-8 max-w-5xl mx-auto pt-2">
             <div className="text-center max-w-2xl mx-auto space-y-2">
@@ -1531,7 +1552,7 @@ export default function Dashboard() {
                       )}`}
                       className="p-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl text-xs flex flex-col items-center justify-center gap-1.5 transition border border-slate-700"
                     >
-                      <span className="text-lg">✉️️</span>
+                      <span className="text-lg">✉</span>
                       <span>Envoyer par Email</span>
                     </a>
                   </div>
@@ -1541,6 +1562,7 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* ONGLET 10 : SUPPORT */}
         {activeTab === 'contact' && (
           <div className="space-y-6 max-w-3xl mx-auto pt-2">
             <h2 className="text-2xl font-black text-white">Support & Assistance</h2>
