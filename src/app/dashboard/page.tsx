@@ -94,6 +94,7 @@ export default function Dashboard() {
 
   const corporateBillingEntity = "COD Reconciliation DZ — Service Comptabilité & Licences";
   const billingRip = "00799999000232882074";
+  const supportWhatsAppDisplay = "0699 00 00 82";
   const supportWhatsAppNumber = "213699000082";
   const supportEmail = "weekyfy@gmail.com";
   const webhookSecretToken = "recon_sec_live_dz2026";
@@ -131,7 +132,7 @@ export default function Dashboard() {
         dzd: p.monthlyDzd, 
         usd: p.monthlyUsd, 
         periodText: '/ mois',
-        detailText: 'Facturation mensuelle sans engagement (30 jours)'
+        detailText: 'Facturation mensuelle sans engagement (30 jours de validité)'
       };
     } else {
       const yearlyDzd = p.monthlyDzd === 0 ? 0 : Math.round(p.monthlyDzd * 12 * 0.9);
@@ -140,7 +141,7 @@ export default function Dashboard() {
         dzd: yearlyDzd,
         usd: yearlyUsd,
         periodText: '/ an (-10%)',
-        detailText: `Règlement annuel avec 10% d'économie (${yearlyDzd.toLocaleString()} DZD)`
+        detailText: `Règlement annuel avec 10% d'économie (365 jours de validité : ${yearlyDzd.toLocaleString()} DZD)`
       };
     }
   };
@@ -155,6 +156,19 @@ export default function Dashboard() {
     navigator.clipboard.writeText(webhookSecretToken);
     setCopySecretSuccess(true);
     setTimeout(() => setCopySecretSuccess(false), 3000);
+  };
+
+  const handleOpenEmail = () => {
+    const subject = `Preuve de virement BaridiMob - ${plans[selectedPlan].name}`;
+    const body = `Bonjour,\n\nJe viens d'effectuer le virement BaridiMob de ${getPrice(selectedPlan).dzd.toLocaleString()} DZD pour activer le ${plans[selectedPlan].name} (${billingCycle === 'yearly' ? 'Annuel -10%' : 'Mensuel'}).\nVeuillez trouver ma quittance en pièce jointe.`;
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${supportEmail}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(gmailUrl, '_blank');
+  };
+
+  const handleCopyEmail = () => {
+    navigator.clipboard.writeText(supportEmail);
+    setCopyEmailSuccess(true);
+    setTimeout(() => setCopyEmailSuccess(false), 3000);
   };
 
   const downloadSampleYalidine = () => {
@@ -191,25 +205,50 @@ export default function Dashboard() {
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
   const [receiptUploadSuccess, setReceiptUploadSuccess] = useState<string | null>(null);
   const [receiptUploadError, setReceiptUploadError] = useState<string | null>(null);
 
   const handleReceiptUpload = async (file: File) => {
     setIsUploadingReceipt(true);
+    setReceiptUploadSuccess(null);
+    setReceiptUploadError(null);
+
     try {
       const fileExt = file.name.split('.').pop() || 'jpg';
       const fileName = `recu_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage.from('baridimob-receipts').upload(fileName, file);
+
+      const { error: uploadError } = await supabase.storage
+        .from('baridimob-receipts')
+        .upload(fileName, file, { contentType: file.type || 'image/jpeg', upsert: false });
+
       if (uploadError) throw new Error(uploadError.message);
 
-      const { data: { publicUrl } } = supabase.storage.from('baridimob-receipts').getPublicUrl(fileName);
-      await supabase.from('payment_receipts').insert([{ receipt_url: publicUrl, amount_dzd: getPrice(selectedPlan).dzd, plan_selected: `${selectedPlan}_${billingCycle}`, status: 'PENDING' }]);
-      setReceiptUploadSuccess("✓ Reçu BaridiMob transmis avec succès ! Validé sous 15 minutes.");
+      const { data: { publicUrl } } = supabase.storage
+        .from('baridimob-receipts')
+        .getPublicUrl(fileName);
+
+      const currentPriceObj = getPrice(selectedPlan);
+      const { error: dbError } = await supabase
+        .from('payment_receipts')
+        .insert([
+          {
+            receipt_url: publicUrl,
+            amount_dzd: currentPriceObj.dzd,
+            plan_selected: `${selectedPlan}_${billingCycle}`,
+            status: 'PENDING'
+          }
+        ]);
+
+      if (dbError) throw new Error(dbError.message);
+      setReceiptUploadSuccess("✓ Reçu BaridiMob transmis avec succès ! Votre licence sera confirmée sous 15 minutes.");
     } catch (err: any) {
-      setReceiptUploadError(`Erreur : ${err.message}`);
+      setReceiptUploadError(`Erreur : ${err.message || 'Impossible de joindre Supabase'}`);
     } finally {
       setIsUploadingReceipt(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (cameraInputRef.current) cameraInputRef.current.value = '';
     }
   };
 
@@ -238,6 +277,12 @@ export default function Dashboard() {
           deliveryStatus: d.delivery_status,
           createdAt: new Date(d.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
         })));
+      } else {
+        setCrmOrders([
+          { orderId: "AYOR-2177", sourcePlatform: "Ayor", customerName: "Abderrahmane Ziani", phone: "0771239845", wilaya: "Boumerdès (35)", codAmountDzd: 6400, carrier: "Yalidine Express", trackingNumber: "yal_crm_476503", ipAddress: "105.105.88.22", isVpn: false, score: 95, status: "APPROUVE", deliveryStatus: "EN_ATTENTE_EXPEDITION", createdAt: "10:14" },
+          { orderId: "YC-5620", sourcePlatform: "YouCan", customerName: "Tarek Brahimi", phone: "0661998877", wilaya: "Blida (09)", codAmountDzd: 4500, carrier: "Yalidine Express", trackingNumber: "yal_crm_965374", ipAddress: "105.102.14.99", isVpn: false, score: 95, status: "APPROUVE", deliveryStatus: "EN_ATTENTE_EXPEDITION", createdAt: "10:05" },
+          { orderId: "SHOPIFY-#1099", sourcePlatform: "Shopify", customerName: "Selma Benali", phone: "0550482914", wilaya: "Alger (16)", codAmountDzd: 8900, carrier: "ZR Express", trackingNumber: "zr_crm_740781", ipAddress: "105.101.42.18", isVpn: false, score: 95, status: "APPROUVE", deliveryStatus: "EN_ATTENTE_EXPEDITION", createdAt: "09:50" }
+        ]);
       }
     } catch (err) {
       console.log("Supabase fetch error:", err);
@@ -412,8 +457,8 @@ export default function Dashboard() {
       <main className="flex-1 p-6 md:p-10 overflow-y-auto">
         {activeTab === 'orders_fraud' && (
           <div className="space-y-6 max-w-7xl mx-auto">
-            {/* ENTÊTE AVEC BOUTONS FORCÉS SUR UNE LIGNE (FLEX-NOWRAP & GAP OPTIMISÉ) */}
-            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-slate-900/50 p-6 rounded-3xl border border-slate-800/80 shadow-lg">
+            {/* ENTÊTE AVEC BOUTONS FORCÉS STRICTEMENT SUR UNE LIGNE (FLEX-NOWRAP) */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-slate-900/50 p-6 rounded-3xl border border-slate-800/80 shadow-lg">
               <div>
                 <span className="text-xs bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
                   CRM Unifié E-commerce & Transporteurs
@@ -426,29 +471,28 @@ export default function Dashboard() {
                 </p>
               </div>
 
-              {/* BOUTONS D'ACTION ALIGNÉS SUR UNE LIGNE UNIQUE SANS RETOUR À LA LIGNE */}
-              <div className="flex items-center gap-2 shrink-0 overflow-x-auto pb-1 xl:pb-0">
+              <div className="flex items-center gap-2 shrink-0 flex-nowrap">
                 <button
                   onClick={() => setActiveTab('import_csv')}
-                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-3.5 py-2.5 rounded-xl text-xs transition shadow whitespace-nowrap flex items-center gap-1.5"
+                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-3 py-2 rounded-xl text-xs transition shadow whitespace-nowrap flex items-center gap-1"
                 >
                   <span>📁</span> Quittance
                 </button>
                 <button
                   onClick={() => handleSimulateCrmOrder('Ayor')}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs transition shadow whitespace-nowrap"
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-2 rounded-xl text-xs transition shadow whitespace-nowrap"
                 >
                   + Ayor
                 </button>
                 <button
                   onClick={() => handleSimulateCrmOrder('YouCan')}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs transition shadow whitespace-nowrap"
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-xl text-xs transition shadow whitespace-nowrap"
                 >
                   + YouCan
                 </button>
                 <button
                   onClick={() => handleSimulateCrmOrder('Shopify')}
-                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs transition shadow whitespace-nowrap"
+                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-2 rounded-xl text-xs transition shadow whitespace-nowrap"
                 >
                   + Shopify
                 </button>
@@ -462,7 +506,7 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* CARTES STATS HARMONISÉES */}
+            {/* CARTES STATS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl shadow">
                 <span className="text-xs text-slate-400">Total Commandes Captées</span>
@@ -563,7 +607,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET IMPORT QUITTANCES */}
         {activeTab === 'import_csv' && (
           <div className="space-y-6 max-w-6xl mx-auto pt-2">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-800/80 pb-5">
@@ -582,30 +625,188 @@ export default function Dashboard() {
               <input type="file" ref={csvFileRef} accept=".csv,.xlsx" onChange={(e) => e.target.files?.[0] && handleProcessCsv(e.target.files[0])} className="hidden" />
               <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-3xl font-black">📥</div>
               <h3 className="text-base font-bold text-white">{csvFileName ? `Fichier : ${csvFileName}` : "Glissez-déposez la quittance ou cliquez ici"}</h3>
-              <button type="button" className="mt-2 bg-emerald-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs">{isAuditingCsv ? "Traitement..." : "Sélectionner un fichier"}</button>
+              <button type="button" className="mt-2 bg-emerald-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs">Sélectionner un fichier</button>
             </div>
           </div>
         )}
 
-        {/* ONGLET FACTURATION */}
+        {/* BOITE DE PAIEMENT PRÉCÉDENTE RESTAURÉE À L'IDENTIQUE */}
         {activeTab === 'billing' && (
           <div className="space-y-8 max-w-5xl mx-auto pt-4">
-            <h1 className="text-3xl font-black text-white text-center">Abonnements & Règlements BaridiMob</h1>
-            <div className="bg-slate-900 border-2 border-emerald-500 rounded-3xl p-8 space-y-6 shadow-2xl">
-              <h3 className="text-2xl font-black text-white">Pack Business : <span className="text-emerald-400 font-mono">2 000 DZD / mois</span></h3>
-              <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
-                <span className="text-xs text-slate-400">Numéro RIP BaridiMob Officiel :</span>
-                <div className="flex items-center justify-between bg-slate-900 p-3 rounded-xl border border-slate-800">
-                  <span className="font-mono text-emerald-400 font-bold text-sm">{billingRip}</span>
-                  <button onClick={() => { navigator.clipboard.writeText(billingRip); alert("RIP Copié !"); }} className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-emerald-500 text-slate-950">Copier RIP</button>
+            <div className="text-center max-w-2xl mx-auto space-y-2">
+              <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-full border border-emerald-500/20">
+                Paiements Sécurisés Algérie (BaridiMob / CCP)
+              </span>
+              <h1 className="text-3xl font-black text-white tracking-tight">Abonnements & Règlements</h1>
+              <p className="text-slate-400 text-xs">
+                Activez ou renouvelez votre accès instantanément via virement BaridiMob ou par capture de reçu.
+              </p>
+
+              <div className="pt-4 flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle('monthly')}
+                  className={`text-xs font-bold transition px-3 py-1 rounded-lg ${
+                    billingCycle === 'monthly' ? 'bg-slate-800 text-white border border-slate-700' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Mensuel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
+                  className="w-14 h-7 bg-slate-800 rounded-full p-1 transition-colors relative border border-slate-700"
+                >
+                  <div className={`w-5 h-5 bg-emerald-500 rounded-full transition-transform ${billingCycle === 'yearly' ? 'translate-x-7' : 'translate-x-0'}`} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle('yearly')}
+                  className={`text-xs font-bold transition px-3 py-1 rounded-lg flex items-center gap-1.5 ${
+                    billingCycle === 'yearly' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span>Annuel (-10%)</span>
+                  <span className="text-[10px] bg-emerald-500 text-slate-950 font-black px-1.5 py-0.2 rounded">ÉCONOMIE</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-3 text-xs">
+              <span className="text-slate-400">⚙️ Simulateur de test (Expiration du compte) :</span>
+              <div className="flex gap-2">
+                <button onClick={() => setSubscriptionDaysLeft(18)} className="px-3 py-1 rounded-lg font-bold bg-emerald-500 text-slate-950">Actif (18j)</button>
+                <button onClick={() => setSubscriptionDaysLeft(1)} className="px-3 py-1 rounded-lg font-bold bg-amber-500 text-slate-950">Alerte J-1</button>
+                <button onClick={() => setSubscriptionDaysLeft(0)} className="px-3 py-1 rounded-lg font-bold bg-rose-600 text-white">Expiré (0j)</button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div onClick={() => setSelectedPlan('free')} className={`p-6 rounded-3xl border cursor-pointer transition ${selectedPlan === 'free' ? 'border-emerald-500 bg-slate-900 ring-2 ring-emerald-500/40 shadow-xl' : 'border-slate-800 bg-slate-900/60'}`}>
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-base font-bold text-white">Pack Découverte</h3>
+                  <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">Essai</span>
+                </div>
+                <div className="text-3xl font-black text-white my-3">0 DZD</div>
+                <p className="text-xs text-slate-400 mb-4">Pour tester l'audit sur un échantillon de 50 commandes.</p>
+              </div>
+
+              <div onClick={() => setSelectedPlan('business')} className={`p-6 rounded-3xl border cursor-pointer relative transition ${selectedPlan === 'business' ? 'border-emerald-500 bg-slate-900 ring-2 ring-emerald-500 shadow-xl' : 'border-slate-800 bg-slate-900/60'}`}>
+                <span className="absolute -top-3 right-4 bg-emerald-500 text-slate-950 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full shadow">Recommandé</span>
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-base font-bold text-white">Pack Business</h3>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono">Complet</span>
+                </div>
+                <div className="text-3xl font-black text-white my-3">
+                  {getPrice('business').dzd.toLocaleString()} DZD
+                  <span className="text-xs font-normal text-slate-400 ml-1.5">{getPrice('business').periodText}</span>
+                </div>
+                <p className="text-xs text-slate-400 mb-4">Pour les boutiques traitant jusqu'à 800 colis par mois.</p>
+              </div>
+
+              <div onClick={() => setSelectedPlan('ultra')} className={`p-6 rounded-3xl border cursor-pointer transition ${selectedPlan === 'ultra' ? 'border-emerald-500 bg-slate-900 ring-2 ring-emerald-500/40 shadow-xl' : 'border-slate-800 bg-slate-900/60'}`}>
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-base font-bold text-white">Pack Ultra Illimité</h3>
+                  <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded font-mono">Élite</span>
+                </div>
+                <div className="text-3xl font-black text-white my-3">
+                  {getPrice('ultra').dzd.toLocaleString()} DZD
+                  <span className="text-xs font-normal text-slate-400 ml-1.5">{getPrice('ultra').periodText}</span>
+                </div>
+                <p className="text-xs text-slate-400 mb-4">Idéal pour les agences e-commerce et gros distributeurs.</p>
+              </div>
+            </div>
+
+            {selectedPlan !== 'free' && (
+              <div className="bg-slate-900 border-2 border-emerald-500 rounded-3xl p-6 md:p-8 space-y-6 shadow-2xl">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-5">
+                  <div>
+                    <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded-full">Paiement Sécurisé BaridiMob / CCP</span>
+                    <h3 className="text-2xl font-black text-white mt-2">
+                      Montant net à transférer : <span className="text-emerald-400 font-mono">{getPrice(selectedPlan).dzd.toLocaleString()} DZD</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-400 mt-1">{getPrice(selectedPlan).detailText}</p>
+                  </div>
+                  <div className="text-xs text-slate-400 bg-slate-950 px-4 py-2 rounded-xl border border-slate-800">
+                    Activation sous <strong className="text-emerald-400">15 minutes</strong>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-1">
+                    <span className="text-xs text-slate-400">Bénéficiaire Officiel :</span>
+                    <div className="text-base font-bold text-white">{corporateBillingEntity}</div>
+                    <span className="text-[11px] text-emerald-400">Compte vérifié Algérie Poste</span>
+                  </div>
+
+                  <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+                    <span className="text-xs text-slate-400">Numéro RIP BaridiMob (20 chiffres) :</span>
+                    <div className="flex items-center justify-between bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+                      <span className="font-mono text-emerald-400 font-bold text-sm select-all tracking-wider">{billingRip}</span>
+                      <button
+                        onClick={handleCopyRip}
+                        className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition"
+                      >
+                        {copySuccess ? '✓ Copié !' : 'Copier RIP'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-2">
+                  <h4 className="text-sm font-bold text-white uppercase tracking-wider">Transmettre votre preuve de règlement :</h4>
+
+                  <input type="file" ref={fileInputRef} accept="image/*,.pdf" onChange={(e) => e.target.files?.[0] && handleReceiptUpload(e.target.files[0])} className="hidden" />
+
+                  {receiptUploadSuccess && <div className="p-4 bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-sm rounded-2xl text-center font-bold">{receiptUploadSuccess}</div>}
+                  {receiptUploadError && <div className="p-4 bg-rose-500/15 border border-rose-500/40 text-rose-300 text-sm rounded-2xl text-center font-bold">{receiptUploadError}</div>}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <button
+                      type="button"
+                      disabled={isUploadingReceipt}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="p-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-2xl text-xs flex flex-col items-center justify-center gap-1.5 transition shadow"
+                    >
+                      <span className="text-lg">📁</span>
+                      <span>Téléverser Capture</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isUploadingReceipt}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="p-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl text-xs flex flex-col items-center justify-center gap-1.5 transition border border-slate-700"
+                    >
+                      <span className="text-lg">📷</span>
+                      <span>Prendre en Photo</span>
+                    </button>
+
+                    <a
+                      href={`https://wa.me/${supportWhatsAppNumber}?text=${encodeURIComponent(`Bonjour, j'ai effectué le virement BaridiMob de ${getPrice(selectedPlan).dzd.toLocaleString()} DZD pour le${plans[selectedPlan].name}. Voici ma quittance.`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-3.5 bg-[#25D366] hover:bg-[#20ba59] text-slate-950 font-bold rounded-2xl text-xs flex flex-col items-center justify-center gap-1.5 transition shadow"
+                    >
+                      <span className="text-lg">💬</span>
+                      <span>Envoyer sur WhatsApp</span>
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={handleOpenEmail}
+                      className="p-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl text-xs flex flex-col items-center justify-center gap-1.5 transition border border-slate-700"
+                    >
+                      <span className="text-lg">✉️</span>
+                      <span>Ouvrir Gmail Direct</span>
+                    </button>
+                  </div>
                 </div>
               </div>
-              <a href={`https://wa.me/${supportWhatsAppNumber}?text=${encodeURIComponent("Bonjour, j'ai effectué le virement BaridiMob de 2 000 DZD pour le Pack Business.")}`} target="_blank" rel="noopener noreferrer" className="block w-full p-4 bg-[#25D366] text-slate-950 font-bold rounded-2xl text-center text-xs">💬 Confirmer le paiement sur WhatsApp (+213 699 00 00 82)</a>
-            </div>
+            )}
           </div>
         )}
 
-        {/* ONGLET API */}
         {activeTab === 'api_settings' && (
           <div className="space-y-6 max-w-5xl mx-auto pt-4">
             <h1 className="text-3xl font-extrabold text-white">Intégration YouCan, Shopify & Ayor</h1>
