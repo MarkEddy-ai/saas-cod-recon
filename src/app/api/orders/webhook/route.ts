@@ -1,4 +1,5 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
 
-    // 1. Détection intelligente de la plateforme source
+    // 1. Parsing multi-plateformes
     let sourcePlatform: 'YouCan' | 'Shopify' | 'Ayor' | 'WooCommerce' = 'YouCan';
     let orderId = `CMD-${Math.floor(1000 + Math.random() * 9000)}`;
     let customerName = "Client Inconnu";
@@ -23,7 +24,6 @@ export async function POST(req: NextRequest) {
     let codAmountDzd = 4500;
 
     if (body.platform === 'ayor' || body.ayor_order_id) {
-      // Format AYOR
       sourcePlatform = 'Ayor';
       orderId = body.ayor_order_id || body.order_number || `AYOR-${Date.now().toString().slice(-4)}`;
       customerName = body.customer?.full_name || body.name || "Client Ayor";
@@ -31,7 +31,6 @@ export async function POST(req: NextRequest) {
       wilaya = body.shipping_address?.province || body.wilaya || "Blida (09)";
       codAmountDzd = parseFloat(body.total_price) || 5200;
     } else if (body.line_items || body.order_number || body.customer?.default_address) {
-      // Format SHOPIFY
       sourcePlatform = 'Shopify';
       orderId = body.name || `SHOPIFY-#${body.order_number || Date.now().toString().slice(-4)}`;
       customerName = `${body.customer?.first_name || ''} ${body.customer?.last_name || ''}`.trim() || body.shipping_address?.name || "Client Shopify";
@@ -39,7 +38,6 @@ export async function POST(req: NextRequest) {
       wilaya = body.shipping_address?.province || body.shipping_address?.city || "Oran (31)";
       codAmountDzd = parseFloat(body.total_price) || 6800;
     } else if (body.data?.order_id || body.data?.customer) {
-      // Format YOUCAN
       sourcePlatform = 'YouCan';
       orderId = body.data?.order_id ? `YC-${body.data.order_id}` : `YC-${Date.now().toString().slice(-4)}`;
       customerName = `${body.data?.customer?.first_name || ''} ${body.data?.customer?.last_name || ''}`.trim() || "Client YouCan";
@@ -47,7 +45,6 @@ export async function POST(req: NextRequest) {
       wilaya = body.data?.shipping_address?.state || "Tipaza (42)";
       codAmountDzd = parseFloat(body.data?.total) || 4500;
     } else {
-      // Format générique / test
       orderId = body.order_id || `CMD-${Date.now().toString().slice(-4)}`;
       customerName = body.customer_name || body.name || "Client Direct";
       phone = body.phone || body.phone_number || "0550123456";
@@ -55,7 +52,7 @@ export async function POST(req: NextRequest) {
       codAmountDzd = parseFloat(body.cod_amount) || 3900;
     }
 
-    // 2. Détection VPN / IP & Fraude
+    // 2. Contrôle Anti-Fraude
     const ipAddress = body.ip || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || "105.101.42.18";
     const isVpn = body.is_vpn !== undefined ? Boolean(body.is_vpn) : (
       ipAddress.startsWith('185.') ||
@@ -74,15 +71,43 @@ export async function POST(req: NextRequest) {
     if (customerName.length < 3) score -= 15;
     score = Math.max(5, Math.min(100, score));
 
-    const status = score >= 70 ? 'APPROUVE' : score >= 40 ? 'SUSPECT' : 'BLOQUE';
+    const fraudStatus = score >= 70 ? 'APPROUVE' : score >= 40 ? 'SUSPECT' : 'BLOQUE';
+    const deliveryStatus = fraudStatus === 'BLOQUE' ? 'ANNULÉ_FRAUDE' : 'EN_ATTENTE_EXPEDITION';
 
-    // 3. Assignation transporteur et suivi CRM
+    // 3. Assignation transporteur
     const carrier = Math.random() > 0.5 ? 'Yalidine Express' : 'ZR Express';
     const trackingNumber = carrier === 'Yalidine Express' 
       ? `yal_crm_${Math.floor(100000 + Math.random() * 900000)}` 
       : `zr_crm_${Math.floor(100000 + Math.random() * 900000)}`;
 
-    const crmOrder = {
+    const newOrderData = {
+      order_id: String(orderId),
+      source_platform: sourcePlatform,
+      customer_name: customerName,
+      phone: cleanPhone || "Numéro manquant",
+      wilaya,
+      cod_amount_dzd: codAmountDzd,
+      carrier,
+      tracking_number: trackingNumber,
+      ip_address: ipAddress,
+      is_vpn: isVpn,
+      trust_score: score,
+      fraud_status: fraudStatus,
+      delivery_status: deliveryStatus
+    };
+
+    // 4. PERSISTANCE BASE DE DONNÉES SUPABASE
+    const { data: dbData, error: dbError } = await supabase
+      .from('crm_orders')
+      .insert([newOrderData])
+      .select()
+      .single();
+
+    if (dbError) {
+      console.error("Erreur insertion Supabase:", dbError.message);
+    }
+
+    const returnedOrder = {
       orderId: String(orderId),
       sourcePlatform,
       customerName,
@@ -94,15 +119,15 @@ export async function POST(req: NextRequest) {
       ipAddress,
       isVpn,
       score,
-      status,
-      deliveryStatus: status === 'BLOQUE' ? 'ANNULÉ_FRAUDE' : 'EN_ATTENTE_EXPEDITION',
+      status: fraudStatus,
+      deliveryStatus,
       createdAt: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
     };
 
     return NextResponse.json({
       success: true,
-      message: `Commande ${orderId} reçue de ${sourcePlatform} et traitée par le CRM`,
-      order: crmOrder
+      message: `Commande ${orderId} insérée dans Supabase`,
+      order: returnedOrder
     }, { status: 200 });
 
   } catch (err: any) {
