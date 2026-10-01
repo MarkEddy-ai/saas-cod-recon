@@ -67,24 +67,31 @@ interface DisputeItem {
 
 interface OrderFraudItem {
   orderId: string;
+  sourcePlatform?: 'YouCan' | 'Shopify' | 'Ayor' | 'WooCommerce';
   customerName: string;
   phone: string;
+  wilaya?: string;
+  codAmountDzd?: number;
+  carrier?: string;
+  trackingNumber?: string;
   ipAddress: string;
   isVpn: boolean;
   score: number;
   status: 'APPROUVE' | 'SUSPECT' | 'BLOQUE';
+  deliveryStatus?: string;
+  createdAt?: string;
 }
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<
     'import_csv' | 'orders_fraud' | 'wilayas' | 'ghosts' | 'rto_audit' | 'dispute' | 'blacklist' | 'billing' | 'connectors' | 'api_settings' | 'contact'
-  >('api_settings');
+  >('orders_fraud');
 
   const [copySuccess, setCopySuccess] = useState(false);
   const [copyEmailSuccess, setCopyEmailSuccess] = useState(false);
   const [copySecretSuccess, setCopySecretSuccess] = useState(false);
 
-  // COORDONNÉES RÉELLES & OFFICIELLES
+  // COORDONNÉES OFFICIELLES
   const corporateBillingEntity = "COD Reconciliation DZ — Service Comptabilité & Licences";
   const billingRip = "00799999000232882074";
   const supportWhatsAppDisplay = "0699 00 00 82";
@@ -164,6 +171,50 @@ export default function Dashboard() {
     navigator.clipboard.writeText(supportEmail);
     setCopyEmailSuccess(true);
     setTimeout(() => setCopyEmailSuccess(false), 3000);
+  };
+
+  // GÉNÉRATEURS DE CSV EN MÉMOIRE
+  const downloadSampleYalidine = () => {
+    const csvContent =
+      "Tracking,Destinataire,Wilaya,Frais_Preleves_DZD,Statut_Livraison\n" +
+      "yal_live_109841,Karim Benali,Alger (16),250,Livre\n" +
+      "yal_live_109842,Amine Khelifi,Boumerdes (35),550,Retour Client Injoignable\n" +
+      "yal_live_109843,Samir Rahmani,Oran (31),250,Retour Refus Conforme\n" +
+      "yal_live_109844,Yacine Mansouri,Blida (09),250,Livre\n" +
+      "yal_live_109845,Lydia Saidi,Tizi Ouzou (15),550,Retour Faux Numero\n" +
+      "yal_live_109846,Farid Belkacem,Tipaza (42),250,Livre\n" +
+      "yal_live_109847,Nadir Cherif,Medea (26),600,Retour Adresse Incomplete\n" +
+      "yal_live_109848,Khaled Touati,Constantine (25),250,Livre\n";
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'yalidine_quittance_reelle_demo.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const downloadSampleZR = () => {
+    const csvContent =
+      "Tracking,Destinataire,Wilaya,Frais_Preleves_DZD,Statut_Livraison\n" +
+      "zr_exp_99281,Sofiane Brahimi,Alger (16),250,Colis Livre Encaissé\n" +
+      "zr_exp_99282,Mohamed Larbi,Biskra (07),750,Retour Client Absent\n" +
+      "zr_exp_99283,Hamza Djebbar,Setif (19),600,Retour Client Injoignable\n" +
+      "zr_exp_99284,Kamel Bouzid,Batna (05),250,Colis Livre Encaissé\n" +
+      "zr_exp_99285,Abdelkader Senoussi,Oran (31),600,Retour Refus Client\n" +
+      "zr_exp_99286,Imad Ould,Chlef (02),250,Colis Livre Encaissé\n" +
+      "zr_exp_99287,Riad Merabet,Annaba (23),700,Retour Annulation Abusive\n";
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'zr_express_quittance_reelle_demo.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -308,24 +359,6 @@ export default function Dashboard() {
     document.body.removeChild(link);
   };
 
-  const downloadSampleCsv = () => {
-    const sampleContent = `Tracking,Destinataire,Wilaya,Frais_Preleves_DZD,Statut\n` +
-      `yal_test_448102,Karim Benali,Alger (16),550,Retour Client Injoignable\n` +
-      `yal_test_448103,Samir Amrani,Oran (31),250,Retour Conforme\n` +
-      `zr_test_881920,Lydia Saidi,Tizi Ouzou (15),650,Retour Faux Numero\n` +
-      `zr_test_881921,Farid Khelifi,Setif (19),700,Client Absent\n` +
-      `yal_test_448104,Yasmine Brahim,Blida (09),250,Retour Refus Conforme\n`;
-    
-    const blob = new Blob([sampleContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `exemple_quittance_yalidine_zr.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const [wilayaFilter, setWilayaFilter] = useState<'ALL' | 'SCALE' | 'EXCLUDE'>('ALL');
   const wilayaStats: WilayaProfitability[] = [
     { code: "16", name: "Alger", totalShipped: 185, deliveredCount: 168, rtoCount: 17, deliveredRate: 90.8, grossSalesDzd: 890000, deliveryFeesDzd: 67200, rtoLossDzd: 6800, netMarginDzd: 384000, recommendation: "SCALE_ADS" },
@@ -379,26 +412,54 @@ export default function Dashboard() {
     setTimeout(() => setClaimNotification(null), 5000);
   };
 
-  const [fraudOrders, setFraudOrders] = useState<OrderFraudItem[]>([
-    { orderId: "CMD-9941", customerName: "Karim Brahimi (Alger)", phone: "0770123984", ipAddress: "105.101.42.18 (Mobilis)", isVpn: false, score: 95, status: "APPROUVE" },
-    { orderId: "CMD-9942", customerName: "Spam Bot / Fake", phone: "0661234567", ipAddress: "185.220.101.5 (Tor/VPN)", isVpn: true, score: 15, status: "BLOQUE" },
-    { orderId: "CMD-9943", customerName: "Yacine M. (Oran)", phone: "0550482914", ipAddress: "41.107.82.90 (Djezzy)", isVpn: false, score: 68, status: "SUSPECT" }
+  // BASE DE DONNÉES CRM DES COMMANDES MULTI-CANALES (AYOR / YOUCAN / SHOPIFY)
+  const [crmOrders, setCrmOrders] = useState<OrderFraudItem[]>([
+    { orderId: "AYOR-8841", sourcePlatform: "Ayor", customerName: "Bilel Mansour", phone: "0550184920", wilaya: "Tipaza (42)", codAmountDzd: 5800, carrier: "Yalidine Express", trackingNumber: "yal_live_44901", ipAddress: "105.101.42.18 (Mobilis)", isVpn: false, score: 95, status: "APPROUVE", deliveryStatus: "EN_TRANSIT", createdAt: "10:14" },
+    { orderId: "YC-9912", sourcePlatform: "YouCan", customerName: "Spam Bot / Fake", phone: "0661234567", wilaya: "Alger (16)", codAmountDzd: 3200, carrier: "ZR Express", trackingNumber: "zr_live_19940", ipAddress: "185.220.101.5 (Tor/VPN)", isVpn: true, score: 15, status: "BLOQUE", deliveryStatus: "ANNULÉ_FRAUDE", createdAt: "09:48" },
+    { orderId: "SHOPIFY-#1044", sourcePlatform: "Shopify", customerName: "Yacine Merabet", phone: "0770482914", wilaya: "Oran (31)", codAmountDzd: 7400, carrier: "Yalidine Express", trackingNumber: "yal_live_88301", ipAddress: "41.107.82.90 (Djezzy)", isVpn: false, score: 85, status: "APPROUVE", deliveryStatus: "ARRIVÉ_AU_HUB", createdAt: "09:12" },
+    { orderId: "AYOR-8840", sourcePlatform: "Ayor", customerName: "Farid Khelifa", phone: "0660991823", wilaya: "Constantine (25)", codAmountDzd: 4200, carrier: "ZR Express", trackingNumber: "zr_live_33491", ipAddress: "105.106.12.44 (Ooredoo)", isVpn: false, score: 90, status: "APPROUVE", deliveryStatus: "LIVRÉ_ET_ENCAISSÉ", createdAt: "08:30" }
   ]);
 
-  const handleSimulateWebhook = async (type: 'legit' | 'fraud') => {
-    const payload = type === 'legit' ? {
-      order_id: `CMD-${Math.floor(1000 + Math.random() * 9000)}`,
-      customer_name: "Amina Belkacem",
-      phone: "0552345678",
-      ip: "105.106.12.44",
-      is_vpn: false
-    } : {
-      order_id: `CMD-${Math.floor(1000 + Math.random() * 9000)}`,
-      customer_name: "Proxy User DZ",
-      phone: "0000000000",
-      ip: "194.26.29.112",
-      is_vpn: true
-    };
+  // SIMULATEURS DE FLUX POUR TESTER LE CRM EN DIRECT
+  const handleSimulateCrmOrder = async (platform: 'YouCan' | 'Shopify' | 'Ayor') => {
+    let payload = {};
+
+    if (platform === 'Ayor') {
+      payload = {
+        platform: "ayor",
+        ayor_order_id: `AYOR-${Math.floor(1000 + Math.random() * 9000)}`,
+        name: "Abderrahmane Ziani",
+        phone: "0771239845",
+        wilaya: "Boumerdès (35)",
+        total_price: 6400,
+        ip: "105.105.88.22",
+        is_vpn: false
+      };
+    } else if (platform === 'Shopify') {
+      payload = {
+        order_number: Math.floor(1000 + Math.random() * 9000),
+        name: "#1099",
+        shipping_address: {
+          name: "Selma Benali",
+          phone: "0550482914",
+          province: "Alger (16)"
+        },
+        total_price: 8900,
+        ip: "105.101.42.18",
+        is_vpn: false
+      };
+    } else {
+      payload = {
+        data: {
+          order_id: Math.floor(1000 + Math.random() * 9000),
+          customer: { first_name: "Tarek", last_name: "Brahimi", phone: "0661998877" },
+          shipping_address: { state: "Blida (09)" },
+          total: 4500
+        },
+        ip: "105.102.14.99",
+        is_vpn: false
+      };
+    }
 
     try {
       const res = await fetch('/api/orders/webhook', {
@@ -411,8 +472,8 @@ export default function Dashboard() {
       });
       const data = await res.json();
       if (data.success && data.order) {
-        setFraudOrders(prev => [data.order, ...prev]);
-        alert(`Commande ${data.order.orderId} reçue et authentifiée via Webhook sécurisé ! Statut: ${data.order.status}`);
+        setCrmOrders(prev => [data.order, ...prev]);
+        alert(`✓ Nouvelle commande ${data.order.orderId} reçue de ${platform} et ajoutée au CRM !`);
       } else {
         alert(data.error || "Erreur webhook");
       }
@@ -520,7 +581,7 @@ export default function Dashboard() {
     }
   };
 
-  const suspiciousOrdersCount = fraudOrders.filter(o => o.status !== 'APPROUVE').length;
+  const suspiciousOrdersCount = crmOrders.filter(o => o.status !== 'APPROUVE').length;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans">
@@ -576,15 +637,16 @@ export default function Dashboard() {
               </span>
             </button>
 
+            {/* ONGLET CRM AVEC COMPTEUR DIRECT */}
             <button
               onClick={() => setActiveTab('orders_fraud')}
               className={`w-full text-left px-3 py-2.5 rounded-xl font-semibold transition flex items-center justify-between ${
                 activeTab === 'orders_fraud' ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30' : 'text-slate-300 hover:bg-slate-800'
               }`}
             >
-              <span className="flex items-center gap-2">⚡ Commandes & Filtre IP</span>
+              <span className="flex items-center gap-2">⚡ CRM Commandes & Filtre IP</span>
               <span className="px-1.5 py-0.5 text-[9px] bg-indigo-500 text-white rounded font-bold">
-                {suspiciousOrdersCount > 0 ? `${suspiciousOrdersCount} Suspects` : 'Live'}
+                {crmOrders.length} Commandes
               </span>
             </button>
 
@@ -662,8 +724,8 @@ export default function Dashboard() {
                 activeTab === 'api_settings' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'text-slate-300 hover:bg-slate-800'
               }`}
             >
-              <span className="flex items-center gap-2">🔌 Shopify / YouCan / MCP</span>
-              <span className="px-1.5 py-0.5 text-[9px] bg-cyan-500 text-slate-950 font-bold rounded">Securisé</span>
+              <span className="flex items-center gap-2">🔌 Shopify / YouCan / Ayor</span>
+              <span className="px-1.5 py-0.5 text-[9px] bg-cyan-500 text-slate-950 font-bold rounded">CRM</span>
             </button>
 
             <button
@@ -692,551 +754,1216 @@ export default function Dashboard() {
       </aside>
 
       <main className="flex-1 p-6 md:p-8 overflow-y-auto">
-        {/* ONGLET 1 : SHOPIFY / YOUCAN / MCP (POINT 5 : JETON SECRET MARCHAND & PROTECTION WEBHOOK) */}
-        {activeTab === 'api_settings' && (
-          <div className="space-y-6 max-w-5xl mx-auto pt-4">
-            <div>
-              <span className="text-xs bg-cyan-500/20 text-cyan-300 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
-                Connecteurs E-commerce & Protection Webhook
+        {/* BANDEAU NOTIFICATION J-1 */}
+        {showOneDayWarning && (
+          <div className="mb-6 p-4 rounded-2xl bg-amber-500/15 border-2 border-amber-500/60 text-amber-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-lg">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl animate-bounce">⚠️</span>
+              <div>
+                <strong className="block text-sm text-white font-bold">Rappel : Votre abonnement expire dans 24 heures !</strong>
+                <p className="text-xs text-amber-300/90">
+                  Renouvelez votre forfait dès maintenant via BaridiMob pour éviter toute interruption de vos audits et webhooks.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setActiveTab('billing')}
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl transition shadow"
+            >
+              Renouveler (2 000 DZD)
+            </button>
+          </div>
+        )}
+
+        {/* ECRAN DE BLOCAGE SI EXPIRÉ */}
+        {isSubscriptionLocked && activeTab !== 'billing' && activeTab !== 'contact' ? (
+          <div className="max-w-2xl mx-auto my-12 p-8 bg-slate-900 border-2 border-rose-500/60 rounded-3xl text-center space-y-5 shadow-2xl">
+            <div className="w-16 h-16 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center text-3xl font-black mx-auto">
+              ⛔
+            </div>
+            <div className="space-y-2">
+              <span className="text-xs bg-rose-500/20 text-rose-300 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                Abonnement Expiré
               </span>
-              <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
-                Intégration YouCan, Shopify & WooCommerce
-              </h1>
-              <p className="text-slate-400 text-xs mt-1">
-                Configurez la passerelle sécurisée pour recevoir et analyser vos commandes en direct depuis vos boutiques.
+              <h2 className="text-2xl font-black text-white">Votre licence est arrivée à son terme</h2>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                Votre période d'abonnement a pris fin. Les fonctionnalités d'audit, de P&L et de détection anti-fraude sont temporairement suspendues.
               </p>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 space-y-6 shadow-xl">
-              <div className="space-y-2">
-                <span className="text-xs text-slate-400 font-bold block">1. URL Officielle de votre Webhook (Méthode POST) :</span>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="text"
-                    readOnly
-                    value="https://saas-cod-recon-2026.vercel.app/api/orders/webhook"
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs font-mono text-emerald-400 select-all"
-                  />
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText("https://saas-cod-recon-2026.vercel.app/api/orders/webhook");
-                      alert("URL Webhook copiée !");
-                    }}
-                    className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-3 rounded-xl text-xs transition"
-                  >
-                    Copier l'URL
-                  </button>
-                </div>
+            <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 text-left text-xs space-y-2 max-w-md mx-auto">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Montant réactivation :</span>
+                <span className="text-emerald-400 font-bold">2 000 DZD (1 mois) ou 21 600 DZD (1 an)</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Virement RIP BaridiMob :</span>
+                <span className="text-white font-mono">{billingRip}</span>
+              </div>
+            </div>
 
-              {/* JETON SECRET MARCHAND (SÉCURITÉ ANTI-FRAUDE) */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-slate-400 font-bold block">2. Clé Secrète de Sécurité Marchand (Webhook Secret Token) :</span>
-                  <span className="text-[10px] text-emerald-400 font-semibold">Authentification requise</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="text"
-                    readOnly
-                    value={webhookSecretToken}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs font-mono text-cyan-400 select-all tracking-wider"
-                  />
-                  <button
-                    onClick={handleCopySecret}
-                    className={`px-4 py-3 text-xs font-bold rounded-xl transition ${
-                      copySecretSuccess ? 'bg-cyan-400 text-slate-950' : 'bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700'
-                    }`}
-                  >
-                    {copySecretSuccess ? '✓ Copié !' : 'Copier Token'}
-                  </button>
-                </div>
-                <p className="text-[11px] text-slate-400">
-                  Cette clé protège votre endpoint contre toute tentative d'injection de fausses commandes par des tiers.
-                </p>
-              </div>
-
-              {/* GUIDE D'INSTALLATION */}
-              <div className="p-5 bg-slate-950 rounded-2xl border border-slate-800 space-y-3">
-                <div className="text-xs font-bold text-white uppercase tracking-wider">
-                  Instructions d'intégration express en 2 étapes :
-                </div>
-                <div className="space-y-2 text-xs text-slate-300">
-                  <p>
-                    <strong className="text-white">Sur YouCan Store :</strong> Rendez-vous dans <em>Paramètres</em> &gt; <em>Webhooks</em> &gt; Créez un nouveau webhook sur l'événement <strong>"Order Created"</strong>. Collez l'URL officielle et ajoutez l'en-tête (Header) <code>x-webhook-secret: {webhookSecretToken}</code>.
-                  </p>
-                  <p>
-                    <strong className="text-white">Sur Shopify :</strong> Allez dans <em>Paramètres</em> &gt; <em>Notifications</em> &gt; <em>Webhooks</em> &gt; Créez un webhook sur <strong>"Création de commande"</strong> au format JSON avec l'URL copiée.
-                  </p>
-                </div>
-              </div>
+            <div className="pt-2 flex flex-col sm:flex-row justify-center gap-3">
+              <button
+                onClick={() => setActiveTab('billing')}
+                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-6 py-3 rounded-xl text-xs transition shadow"
+              >
+                💳 Transmettre le Reçu BaridiMob de Réactivation
+              </button>
+              <a
+                href={`https://wa.me/${supportWhatsAppNumber}?text=${encodeURIComponent("Bonjour, mon abonnement vient d'expirer. Je souhaite réactiver ma licence COD Reconciliation DZ.")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-[#25D366] hover:bg-[#20ba59] text-slate-950 font-bold px-6 py-3 rounded-xl text-xs transition shadow flex items-center justify-center gap-2"
+              >
+                <span>💬</span>
+                <span>Réactiver via WhatsApp</span>
+              </a>
             </div>
           </div>
-        )}
+        ) : (
+          <>
+            {/* ONGLET 1 : CRM COMMANDES & EXPÉDITIONS DÉTAILLÉES */}
+            {activeTab === 'orders_fraud' && (
+              <div className="space-y-6 max-w-6xl mx-auto pt-2">
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                  <div>
+                    <span className="text-xs bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                      CRM Unifié E-commerce & Transporteurs
+                    </span>
+                    <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
+                      Suivi Détaillé des Commandes & Expéditions
+                    </h1>
+                    <p className="text-slate-400 text-xs mt-1">
+                      Flux en direct capté depuis vos boutiques (Ayor, YouCan, Shopify) avec contrôle IP et statut transporteur temps réel.
+                    </p>
+                  </div>
 
-        {/* AUTRES ONGLETS STABLES */}
-        {activeTab === 'import_csv' && (
-          <div className="space-y-6 max-w-6xl mx-auto pt-2">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-              <div>
-                <span className="text-xs bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
-                  Moteur d'Audit Automatisé
-                </span>
-                <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
-                  Importateur & Analyseur de Quittances de Versement
-                </h1>
-                <p className="text-slate-400 text-xs mt-1">
-                  Déposez votre bordereau (Yalidine, ZR Express, EcoTrack) pour identifier instantanément les surfacturations.
-                </p>
-              </div>
-
-              <button
-                onClick={downloadSampleCsv}
-                className="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2"
-              >
-                <span>📥</span> Télécharger Exemple CSV Yalidine/ZR
-              </button>
-            </div>
-
-            <div
-              onClick={() => csvFileRef.current?.click()}
-              className="border-2 border-dashed border-emerald-500/40 hover:border-emerald-400 bg-slate-900/60 hover:bg-slate-900 rounded-3xl p-8 md:p-12 text-center cursor-pointer transition flex flex-col items-center justify-center gap-3 shadow-xl"
-            >
-              <input
-                type="file"
-                ref={csvFileRef}
-                accept=".csv,.xlsx,.txt"
-                onChange={(e) => e.target.files?.[0] && handleProcessCsv(e.target.files[0])}
-                className="hidden"
-              />
-              <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-3xl font-black">
-                📥
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-white">
-                  {csvFileName ? `Fichier analysé : ${csvFileName}` : "Glissez-déposez votre fichier de quittance ou cliquez ici"}
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Exports .CSV ou Excel de Yalidine et ZR Express acceptés.
-                </p>
-              </div>
-              <button
-                type="button"
-                className="mt-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition"
-              >
-                {isAuditingCsv ? "Audit algorithmique en cours..." : "Sélectionner un fichier"}
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
-                <span className="text-xs text-slate-400">Lignes Analysées</span>
-                <div className="text-3xl font-black text-white mt-1">{auditStats.totalRows} colis</div>
-                <span className="text-[11px] text-slate-400">Sur le bordereau actif</span>
-              </div>
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
-                <span className="text-xs text-slate-400">Surfacturations Détectées</span>
-                <div className="text-3xl font-black text-rose-400 mt-1">{auditStats.overchargedCount} colis</div>
-                <span className="text-[11px] text-rose-300 font-medium">Tarifs de retour non conformes</span>
-              </div>
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
-                <span className="text-xs text-slate-400">Trop-Perçu Récupérable</span>
-                <div className="text-3xl font-black text-emerald-400 mt-1">+{auditStats.totalOverchargedDzd.toLocaleString()} DZD</div>
-                <span className="text-[11px] text-emerald-300 font-medium">À contester immédiatement</span>
-              </div>
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col justify-between">
-                <div>
-                  <span className="text-xs text-slate-400">Action Légale</span>
-                  <div className="text-sm font-bold text-white mt-1">Bordereau Litige</div>
+                  {/* BOUTONS SIMULATION MULTI-CANALE EN 1 CLIC */}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => handleSimulateCrmOrder('Ayor')}
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-2 rounded-xl text-xs transition shadow flex items-center gap-1.5"
+                    >
+                      <span>🛍️</span> Simuler Commande Ayor
+                    </button>
+                    <button
+                      onClick={() => handleSimulateCrmOrder('YouCan')}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-xl text-xs transition shadow flex items-center gap-1.5"
+                    >
+                      <span>🛒</span> Simuler YouCan
+                    </button>
+                    <button
+                      onClick={() => handleSimulateCrmOrder('Shopify')}
+                      className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-2 rounded-xl text-xs transition shadow flex items-center gap-1.5"
+                    >
+                      <span>📦</span> Simuler Shopify
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={exportDisputeCsv}
-                  className="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded-xl text-xs transition"
-                >
-                  Exporter Contestation (.CSV)
-                </button>
-              </div>
-            </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-              <div className="p-4 border-b border-slate-800 flex justify-between items-center">
-                <h3 className="text-sm font-bold text-white">Résultat de l'Audit Ligne par Ligne</h3>
-                <span className="text-[11px] text-slate-400 bg-slate-950 px-3 py-1 rounded-lg border border-slate-800">
-                  Base contractuelle : 200 à 250 DZD / retour
-                </span>
-              </div>
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
-                  <tr>
-                    <th className="p-4">N° Tracking</th>
-                    <th className="p-4">Transporteur</th>
-                    <th className="p-4">Destinataire</th>
-                    <th className="p-4">Motif</th>
-                    <th className="p-4">Tarif Prévu</th>
-                    <th className="p-4">Tarif Prélevé</th>
-                    <th className="p-4">Trop-Perçu</th>
-                    <th className="p-4 text-right">Statut</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-sans">
-                  {rtoAudits.map((r, idx) => (
-                    <tr key={idx} className="hover:bg-slate-800/30">
-                      <td className="p-4 font-mono font-bold text-white">{r.tracking}</td>
-                      <td className="p-4 text-slate-300">{r.carrier}</td>
-                      <td className="p-4 text-slate-200">{r.customerName} ({r.wilaya})</td>
-                      <td className="p-4 text-slate-400">{r.returnReason}</td>
-                      <td className="p-4 font-mono">{r.negotiatedReturnFee} DZD</td>
-                      <td className="p-4 font-mono font-bold text-rose-400">{r.chargedReturnFee} DZD</td>
-                      <td className="p-4 font-mono font-black text-rose-400">+{r.overchargedFee} DZD</td>
-                      <td className="p-4 text-right">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-black ${
-                          r.status === 'OVERCHARGED' ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'
-                        }`}>
-                          {r.status === 'OVERCHARGED' ? 'SURFACTURÉ' : 'CONFORME'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+                {/* STATISTIQUES CRM */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
+                    <span className="text-xs text-slate-400">Total Commandes Captées</span>
+                    <div className="text-3xl font-black text-white mt-1">{crmOrders.length}</div>
+                    <span className="text-[11px] text-slate-400">Synchronisées via Webhook</span>
+                  </div>
+                  <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
+                    <span className="text-xs text-slate-400">Commandes Saines</span>
+                    <div className="text-3xl font-black text-emerald-400 mt-1">
+                      {crmOrders.filter(o => o.status === 'APPROUVE').length}
+                    </div>
+                    <span className="text-[11px] text-emerald-300">Score &gt; 70 (Prêtes à livrer)</span>
+                  </div>
+                  <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
+                    <span className="text-xs text-slate-400">Alertes Anti-Fraude / VPN</span>
+                    <div className="text-3xl font-black text-rose-400 mt-1">
+                      {crmOrders.filter(o => o.status !== 'APPROUVE').length}
+                    </div>
+                    <span className="text-[11px] text-rose-300">Refus ou numéros suspects</span>
+                  </div>
+                  <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
+                    <span className="text-xs text-slate-400">Chiffre d'Affaires COD Engagé</span>
+                    <div className="text-2xl font-black text-cyan-400 mt-1 font-mono">
+                      {crmOrders.reduce((acc, curr) => acc + (curr.codAmountDzd || 0), 0).toLocaleString()} DZD
+                    </div>
+                    <span className="text-[11px] text-cyan-300">En cours d'acheminement</span>
+                  </div>
+                </div>
 
-        {/* ONGLET GHOSTS */}
-        {activeTab === 'ghosts' && (
-          <div className="space-y-6 max-w-6xl mx-auto pt-2">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-              <div>
-                <span className="text-xs bg-amber-500/20 text-amber-300 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
-                  Radar Trésorerie Séquestrée
-                </span>
-                <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
-                  Colis Immobilisés en Hubs (+7 Jours)
-                </h1>
-                <p className="text-slate-400 text-xs mt-1">
-                  Détection des expéditions oubliées ou perdues dans les centres régionaux avant prescription légale.
-                </p>
-              </div>
-
-              <div className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-2xl flex items-center gap-3">
-                <span className="text-xs text-slate-400">Trésorerie bloquée :</span>
-                <span className="font-mono text-amber-400 font-black text-lg">
-                  {ghostParcels
-                    .filter(g => g.status === 'IMMOBILISE')
-                    .reduce((acc, curr) => acc + curr.codAmountDzd, 0)
-                    .toLocaleString()} DZD
-                </span>
-              </div>
-            </div>
-
-            {claimNotification && (
-              <div className="p-4 bg-emerald-500/15 border-2 border-emerald-500/50 text-emerald-300 text-xs rounded-2xl font-bold shadow-lg animate-fadeIn">
-                {claimNotification}
+                {/* TABLEAU CRM DÉTAILLÉ */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                  <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/60">
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <span>📋</span> Registre CRM des Commandes & Suivi Transporteurs
+                    </h3>
+                    <span className="text-[10px] text-slate-400 font-mono">Actualisation temps réel</span>
+                  </div>
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
+                      <tr>
+                        <th className="p-3.5">Plateforme</th>
+                        <th className="p-3.5">N° Commande</th>
+                        <th className="p-3.5">Destinataire & Wilaya</th>
+                        <th className="p-3.5">Téléphone</th>
+                        <th className="p-3.5">Montant COD</th>
+                        <th className="p-3.5">Transporteur & Tracking</th>
+                        <th className="p-3.5">Contrôle Fraude</th>
+                        <th className="p-3.5 text-right">Statut Expédition</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 font-sans">
+                      {crmOrders.map((ord, idx) => (
+                        <tr key={idx} className="hover:bg-slate-800/30">
+                          <td className="p-3.5">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                              ord.sourcePlatform === 'Ayor' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40' :
+                              ord.sourcePlatform === 'Shopify' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40' :
+                              'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            }`}>
+                              {ord.sourcePlatform || 'YouCan'}
+                            </span>
+                          </td>
+                          <td className="p-3.5 font-mono font-bold text-white">{ord.orderId}</td>
+                          <td className="p-3.5">
+                            <div className="font-bold text-slate-200">{ord.customerName}</div>
+                            <div className="text-[10px] text-slate-400">{ord.wilaya || 'Algérie'}</div>
+                          </td>
+                          <td className="p-3.5 font-mono text-slate-300">{ord.phone}</td>
+                          <td className="p-3.5 font-mono font-bold text-white">
+                            {(ord.codAmountDzd || 4500).toLocaleString()} DZD
+                          </td>
+                          <td className="p-3.5">
+                            <div className="text-slate-300 font-medium">{ord.carrier || 'Yalidine Express'}</div>
+                            <div className="font-mono text-[10px] text-emerald-400 select-all">{ord.trackingNumber || 'yal_crm_99481'}</div>
+                          </td>
+                          <td className="p-3.5">
+                            {ord.isVpn ? (
+                              <span className="px-2 py-0.5 bg-rose-500/20 text-rose-400 font-bold rounded text-[10px] border border-rose-500/40">
+                                🚨 VPN Détecté
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 font-bold rounded text-[10px]">
+                                ✓ Score {ord.score}/100
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3.5 text-right">
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${
+                              ord.deliveryStatus === 'LIVRÉ_ET_ENCAISSÉ' ? 'bg-emerald-500/20 text-emerald-400' :
+                              ord.deliveryStatus === 'ARRIVÉ_AU_HUB' ? 'bg-amber-500/20 text-amber-400' :
+                              ord.deliveryStatus === 'ANNULÉ_FRAUDE' ? 'bg-rose-500/20 text-rose-400' :
+                              'bg-blue-500/20 text-blue-300'
+                            }`}>
+                              {ord.deliveryStatus || 'EN_COURS_DE_LIVRAISON'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
-                  <tr>
-                    <th className="p-4">N° Tracking</th>
-                    <th className="p-4">Transporteur</th>
-                    <th className="p-4">Destinataire</th>
-                    <th className="p-4">Centre Régional (Hub)</th>
-                    <th className="p-4">Jours Bloqué</th>
-                    <th className="p-4">Valeur Marchandise</th>
-                    <th className="p-4 text-right">Action Légale</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-sans">
-                  {ghostParcels.map((g, idx) => (
-                    <tr key={idx} className="hover:bg-slate-800/30">
-                      <td className="p-4 font-mono font-bold text-white">{g.tracking}</td>
-                      <td className="p-4 text-slate-300">{g.carrier}</td>
-                      <td className="p-4 text-slate-200">{g.customerName} ({g.wilaya})</td>
-                      <td className="p-4 font-medium text-amber-400">{g.hubLocation}</td>
-                      <td className="p-4 font-mono font-black text-rose-400">{g.daysStuck} jours</td>
-                      <td className="p-4 font-mono font-bold text-white">{g.codAmountDzd.toLocaleString()} DZD</td>
-                      <td className="p-4 text-right">
-                        {g.status === 'IMMOBILISE' ? (
+            {/* ONGLET INTÉGRATIONS SHOPIFY / YOUCAN / AYOR */}
+            {activeTab === 'api_settings' && (
+              <div className="space-y-6 max-w-5xl mx-auto pt-4">
+                <div>
+                  <span className="text-xs bg-cyan-500/20 text-cyan-300 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                    Passerelles E-commerce & CRM Universel
+                  </span>
+                  <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
+                    Intégration YouCan, Shopify, Ayor & WooCommerce
+                  </h1>
+                  <p className="text-slate-400 text-xs mt-1">
+                    Configurez votre point d'entrée unique pour alimenter automatiquement votre CRM et auditer les livraisons.
+                  </p>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 space-y-6 shadow-xl">
+                  <div className="space-y-2">
+                    <span className="text-xs text-slate-400 font-bold block">1. URL Officielle de votre Webhook CRM (Méthode POST) :</span>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="text"
+                        readOnly
+                        value="https://saas-cod-recon-2026.vercel.app/api/orders/webhook"
+                        className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs font-mono text-emerald-400 select-all"
+                      />
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText("https://saas-cod-recon-2026.vercel.app/api/orders/webhook");
+                          alert("URL Webhook copiée !");
+                        }}
+                        className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-3 rounded-xl text-xs transition"
+                      >
+                        Copier l'URL
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-400 font-bold block">2. Clé Secrète de Sécurité Marchand (Webhook Secret Token) :</span>
+                      <span className="text-[10px] text-emerald-400 font-semibold">Protection anti-spam active</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="text"
+                        readOnly
+                        value={webhookSecretToken}
+                        className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs font-mono text-cyan-400 select-all tracking-wider"
+                      />
+                      <button
+                        onClick={handleCopySecret}
+                        className={`px-4 py-3 text-xs font-bold rounded-xl transition ${
+                          copySecretSuccess ? 'bg-cyan-400 text-slate-950' : 'bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700'
+                        }`}
+                      >
+                        {copySecretSuccess ? '✓ Copié !' : 'Copier Token'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-5 bg-slate-950 rounded-2xl border border-slate-800 space-y-4">
+                    <div className="text-xs font-bold text-white uppercase tracking-wider">
+                      Guide de configuration par plateforme :
+                    </div>
+                    <div className="space-y-3 text-xs text-slate-300">
+                      <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
+                        <strong className="text-indigo-400 font-bold">Sur Ayor Platform :</strong>
+                        <p className="text-slate-400 mt-1">
+                          Allez dans <em>Paramètres</em> &gt; <em>Intégrations & Webhooks</em> &gt; Ajoutez un webhook sur <strong>"Création de commande"</strong>, collez l'URL et ajoutez le token secret dans les en-têtes HTTP.
+                        </p>
+                      </div>
+                      <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
+                        <strong className="text-emerald-400 font-bold">Sur YouCan Store :</strong>
+                        <p className="text-slate-400 mt-1">
+                          Allez dans <em>Paramètres</em> &gt; <em>Webhooks</em> &gt; Événement <strong>"Order Created"</strong> avec l'en-tête <code>x-webhook-secret: {webhookSecretToken}</code>.
+                        </p>
+                      </div>
+                      <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
+                        <strong className="text-blue-400 font-bold">Sur Shopify :</strong>
+                        <p className="text-slate-400 mt-1">
+                          Allez dans <em>Paramètres</em> &gt; <em>Notifications</em> &gt; <em>Webhooks</em> &gt; Événement <strong>"Création de commande"</strong> au format JSON.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* AUTRES ONGLETS STABLES */}
+            {activeTab === 'import_csv' && (
+              <div className="space-y-6 max-w-6xl mx-auto pt-2">
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-800/80 pb-5">
+                  <div>
+                    <span className="text-xs bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                      Moteur d'Audit Automatisé
+                    </span>
+                    <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
+                      Importateur & Analyseur de Quittances de Versement
+                    </h1>
+                    <p className="text-slate-400 text-xs mt-1">
+                      Déposez votre bordereau pour identifier instantanément les surfacturations et litiges.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={downloadSampleYalidine}
+                      className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow"
+                    >
+                      <span>📥</span> Exemple Yalidine (.CSV)
+                    </button>
+                    <button
+                      onClick={downloadSampleZR}
+                      className="bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow"
+                    >
+                      <span>📥</span> Exemple ZR Express (.CSV)
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => csvFileRef.current?.click()}
+                  className="border-2 border-dashed border-emerald-500/40 hover:border-emerald-400 bg-slate-900/60 hover:bg-slate-900 rounded-3xl p-8 md:p-12 text-center cursor-pointer transition flex flex-col items-center justify-center gap-3 shadow-xl"
+                >
+                  <input
+                    type="file"
+                    ref={csvFileRef}
+                    accept=".csv,.xlsx,.txt"
+                    onChange={(e) => e.target.files?.[0] && handleProcessCsv(e.target.files[0])}
+                    className="hidden"
+                  />
+                  <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-3xl font-black">
+                    📥
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">
+                      {csvFileName ? `Fichier analysé : ${csvFileName}` : "Glissez-déposez votre fichier de quittance ou cliquez ici"}
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Exports .CSV ou Excel de Yalidine et ZR Express acceptés.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="mt-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition"
+                  >
+                    {isAuditingCsv ? "Audit algorithmique en cours..." : "Sélectionner un fichier"}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
+                    <span className="text-xs text-slate-400">Lignes Analysées</span>
+                    <div className="text-3xl font-black text-white mt-1">{auditStats.totalRows} colis</div>
+                    <span className="text-[11px] text-slate-400">Sur le bordereau actif</span>
+                  </div>
+                  <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
+                    <span className="text-xs text-slate-400">Surfacturations Détectées</span>
+                    <div className="text-3xl font-black text-rose-400 mt-1">{auditStats.overchargedCount} colis</div>
+                    <span className="text-[11px] text-rose-300 font-medium">Tarifs de retour non conformes</span>
+                  </div>
+                  <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
+                    <span className="text-xs text-slate-400">Trop-Perçu Récupérable</span>
+                    <div className="text-3xl font-black text-emerald-400 mt-1">+{auditStats.totalOverchargedDzd.toLocaleString()} DZD</div>
+                    <span className="text-[11px] text-emerald-300 font-medium">À contester immédiatement</span>
+                  </div>
+                  <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col justify-between">
+                    <div>
+                      <span className="text-xs text-slate-400">Action Légale</span>
+                      <div className="text-sm font-bold text-white mt-1">Bordereau Litige</div>
+                    </div>
+                    <button
+                      onClick={exportDisputeCsv}
+                      className="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded-xl text-xs transition"
+                    >
+                      Exporter Contestation (.CSV)
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                  <div className="p-4 border-b border-slate-800 flex justify-between items-center">
+                    <h3 className="text-sm font-bold text-white">Résultat de l'Audit Ligne par Ligne</h3>
+                    <span className="text-[11px] text-slate-400 bg-slate-950 px-3 py-1 rounded-lg border border-slate-800">
+                      Base contractuelle : 200 à 250 DZD / retour
+                    </span>
+                  </div>
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
+                      <tr>
+                        <th className="p-4">N° Tracking</th>
+                        <th className="p-4">Transporteur</th>
+                        <th className="p-4">Destinataire</th>
+                        <th className="p-4">Motif</th>
+                        <th className="p-4">Tarif Prévu</th>
+                        <th className="p-4">Tarif Prélevé</th>
+                        <th className="p-4">Trop-Perçu</th>
+                        <th className="p-4 text-right">Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 font-sans">
+                      {rtoAudits.map((r, idx) => (
+                        <tr key={idx} className="hover:bg-slate-800/30">
+                          <td className="p-4 font-mono font-bold text-white">{r.tracking}</td>
+                          <td className="p-4 text-slate-300">{r.carrier}</td>
+                          <td className="p-4 text-slate-200">{r.customerName} ({r.wilaya})</td>
+                          <td className="p-4 text-slate-400">{r.returnReason}</td>
+                          <td className="p-4 font-mono">{r.negotiatedReturnFee} DZD</td>
+                          <td className="p-4 font-mono font-bold text-rose-400">{r.chargedReturnFee} DZD</td>
+                          <td className="p-4 font-mono font-black text-rose-400">+{r.overchargedFee} DZD</td>
+                          <td className="p-4 text-right">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-black ${
+                              r.status === 'OVERCHARGED' ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'
+                            }`}>
+                              {r.status === 'OVERCHARGED' ? 'SURFACTURÉ' : 'CONFORME'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ONGLET LITIGES */}
+            {activeTab === 'dispute' && (
+              <div className="space-y-6 max-w-5xl mx-auto pt-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800/80 pb-5">
+                  <div>
+                    <span className="text-xs bg-rose-500/20 text-rose-400 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                      Contentieux Transporteurs
+                    </span>
+                    <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
+                      Dossiers de Litiges Transporteurs
+                    </h1>
+                    <p className="text-slate-400 text-xs mt-1">
+                      Récapitulatif des dossiers ouverts pour contestation officielle et retenue sur quittance.
+                    </p>
+                  </div>
+                  <button
+                    onClick={exportDisputeCsv}
+                    className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center gap-2"
+                  >
+                    <span>📑</span> Exporter Bordereau (.CSV)
+                  </button>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
+                      <tr>
+                        <th className="p-4">Dossier</th>
+                        <th className="p-4">Tracking</th>
+                        <th className="p-4">Transporteur</th>
+                        <th className="p-4">Motif & Justificatif</th>
+                        <th className="p-4">Montant Réclamé</th>
+                        <th className="p-4 text-right">Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 font-sans">
+                      {disputes.map((d, idx) => (
+                        <tr key={idx} className="hover:bg-slate-800/30">
+                          <td className="p-4 font-mono font-bold text-white">{d.id}</td>
+                          <td className="p-4 font-mono text-emerald-400">{d.tracking}</td>
+                          <td className="p-4 text-slate-300">{d.carrier}</td>
+                          <td className="p-4 text-slate-300">{d.issue}</td>
+                          <td className="p-4 font-bold text-rose-400">+{d.amountClaimedDzd.toLocaleString()} DZD</td>
+                          <td className="p-4 text-right font-black text-amber-400">
+                            <span className="px-2.5 py-1 bg-amber-500/20 text-amber-400 rounded-full text-[10px]">
+                              {d.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ONGLET GHOSTS */}
+            {activeTab === 'ghosts' && (
+              <div className="space-y-6 max-w-6xl mx-auto pt-2">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                  <div>
+                    <span className="text-xs bg-amber-500/20 text-amber-300 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                      Radar Trésorerie Séquestrée
+                    </span>
+                    <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
+                      Colis Immobilisés en Hubs (+7 Jours)
+                    </h1>
+                    <p className="text-slate-400 text-xs mt-1">
+                      Détection des expéditions oubliées ou perdues dans les centres régionaux avant prescription légale.
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-2xl flex items-center gap-3">
+                    <span className="text-xs text-slate-400">Trésorerie bloquée :</span>
+                    <span className="font-mono text-amber-400 font-black text-lg">
+                      {ghostParcels
+                        .filter(g => g.status === 'IMMOBILISE')
+                        .reduce((acc, curr) => acc + curr.codAmountDzd, 0)
+                        .toLocaleString()} DZD
+                    </span>
+                  </div>
+                </div>
+
+                {claimNotification && (
+                  <div className="p-4 bg-emerald-500/15 border-2 border-emerald-500/50 text-emerald-300 text-xs rounded-2xl font-bold shadow-lg animate-fadeIn">
+                    {claimNotification}
+                  </div>
+                )}
+
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
+                      <tr>
+                        <th className="p-4">N° Tracking</th>
+                        <th className="p-4">Transporteur</th>
+                        <th className="p-4">Destinataire</th>
+                        <th className="p-4">Centre Régional (Hub)</th>
+                        <th className="p-4">Jours Bloqué</th>
+                        <th className="p-4">Valeur Marchandise</th>
+                        <th className="p-4 text-right">Action Légale</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 font-sans">
+                      {ghostParcels.map((g, idx) => (
+                        <tr key={idx} className="hover:bg-slate-800/30">
+                          <td className="p-4 font-mono font-bold text-white">{g.tracking}</td>
+                          <td className="p-4 text-slate-300">{g.carrier}</td>
+                          <td className="p-4 text-slate-200">{g.customerName} ({g.wilaya})</td>
+                          <td className="p-4 font-medium text-amber-400">{g.hubLocation}</td>
+                          <td className="p-4 font-mono font-black text-rose-400">{g.daysStuck} jours</td>
+                          <td className="p-4 font-mono font-bold text-white">{g.codAmountDzd.toLocaleString()} DZD</td>
+                          <td className="p-4 text-right">
+                            {g.status === 'IMMOBILISE' ? (
+                              <button
+                                onClick={() => handleClaimGhost(g)}
+                                className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-[11px] transition shadow flex items-center gap-1.5 ml-auto"
+                              >
+                                <span>🚨</span>
+                                <span>Lancer Réclamation Perte</span>
+                              </button>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-xl font-bold text-[11px]">
+                                <span>✓</span>
+                                <span>Réclamation Transmise (Dossier Ouvert)</span>
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ONGLET WILAYAS */}
+            {activeTab === 'wilayas' && (
+              <div className="space-y-6 max-w-6xl mx-auto pt-2">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div>
+                    <span className="text-xs bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                      Moteur P&L & Arbitrage Publicitaire
+                    </span>
+                    <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
+                      Rentabilité Nette par Wilaya & Décisions Meta Ads
+                    </h1>
+                    <p className="text-slate-400 text-xs mt-1">
+                      Chiffre d'affaires encaissé vs Coûts réels de retours pour optimiser vos budgets publicitaires.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setWilayaFilter('ALL')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                        wilayaFilter === 'ALL' ? 'bg-slate-800 text-white border border-slate-700' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Toutes
+                    </button>
+                    <button
+                      onClick={() => setWilayaFilter('SCALE')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                        wilayaFilter === 'SCALE' ? 'bg-emerald-500 text-slate-950 font-black' : 'text-emerald-400 hover:bg-emerald-500/10'
+                      }`}
+                    >
+                      🚀 À Scaler Meta Ads
+                    </button>
+                    <button
+                      onClick={() => setWilayaFilter('EXCLUDE')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                        wilayaFilter === 'EXCLUDE' ? 'bg-rose-600 text-white font-black' : 'text-rose-400 hover:bg-rose-500/10'
+                      }`}
+                    >
+                      ⛔ À Exclure Meta Ads
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
+                    <span className="text-xs text-slate-400">Wilayas Hautement Rentables</span>
+                    <div className="text-3xl font-black text-emerald-400 mt-1">
+                      {wilayaStats.filter(w => w.recommendation === 'SCALE_ADS').length} Wilayas
+                    </div>
+                    <span className="text-[11px] text-emerald-300">Taux de livraison supérieur à 85%</span>
+                  </div>
+                  <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
+                    <span className="text-xs text-slate-400">Wilayas Déficitaires</span>
+                    <div className="text-3xl font-black text-rose-400 mt-1">
+                      {wilayaStats.filter(w => w.recommendation === 'EXCLUDE_ADS').length} Wilayas
+                    </div>
+                    <span className="text-[11px] text-rose-300">Pertes de retours supérieures aux bénéfices</span>
+                  </div>
+                  <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
+                    <span className="text-xs text-slate-400">Économie publicitaire mensuelle estimée</span>
+                    <div className="text-3xl font-black text-white mt-1">+65 000 DZD</div>
+                    <span className="text-[11px] text-slate-400">En excluant les wilayas à risque de vos Adsets</span>
+                  </div>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
+                      <tr>
+                        <th className="p-4">Wilaya</th>
+                        <th className="p-4">Expédiés</th>
+                        <th className="p-4">Taux Livré</th>
+                        <th className="p-4">CA Encaissé</th>
+                        <th className="p-4">Pertes Retours</th>
+                        <th className="p-4">Marge Nette Réelle</th>
+                        <th className="p-4 text-right">Décision Meta Ads</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 font-sans">
+                      {filteredWilayas.map((w, idx) => (
+                        <tr key={idx} className="hover:bg-slate-800/30">
+                          <td className="p-4 font-bold text-white">{w.code} - {w.name}</td>
+                          <td className="p-4 font-mono text-slate-300">{w.totalShipped} colis</td>
+                          <td className="p-4 font-mono font-bold text-emerald-400">{w.deliveredRate}%</td>
+                          <td className="p-4 font-mono text-slate-200">{w.grossSalesDzd.toLocaleString()} DZD</td>
+                          <td className="p-4 font-mono text-rose-400 font-bold">-{w.rtoLossDzd.toLocaleString()} DZD</td>
+                          <td className="p-4 font-mono font-black">
+                            <span className={w.netMarginDzd > 0 ? 'text-emerald-400' : 'text-rose-500'}>
+                              {w.netMarginDzd > 0 ? `+${w.netMarginDzd.toLocaleString()} DZD` : `${w.netMarginDzd.toLocaleString()} DZD`}
+                            </span>
+                          </td>
+                          <td className="p-4 text-right">
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${
+                              w.recommendation === 'SCALE_ADS' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' :
+                              w.recommendation === 'HEALTHY' ? 'bg-blue-500/20 text-blue-300' :
+                              w.recommendation === 'REQUIRE_DEPOSIT' ? 'bg-amber-500/20 text-amber-300' :
+                              'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                            }`}>
+                              {w.recommendation === 'SCALE_ADS' && '🚀 SCALER ADS'}
+                              {w.recommendation === 'HEALTHY' && '✓ STABLE'}
+                              {w.recommendation === 'REQUIRE_DEPOSIT' && '⚠️ EXIGER ACOMPTE'}
+                              {w.recommendation === 'EXCLUDE_ADS' && '⛔ EXCLURE ADS'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ONGLET SCORE ACHETEUR */}
+            {activeTab === 'blacklist' && (
+              <div className="space-y-8 max-w-5xl mx-auto pt-4">
+                <div className="border-b border-slate-800/80 pb-5">
+                  <span className="text-xs bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                    Répertoire Partagé Algérie
+                  </span>
+                  <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
+                    Score Acheteur & Blacklist Algérie Partagée
+                  </h1>
+                  <p className="text-slate-400 text-xs mt-1">
+                    Auditez tout numéro client avant validation pour éliminer les retours coûteux.
+                  </p>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                  <form onSubmit={handleSearchBuyer} className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="text"
+                      placeholder="Ex : 0550123456 ou 0770987654"
+                      value={searchPhone}
+                      onChange={(e) => setSearchPhone(e.target.value)}
+                      className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white font-mono text-base focus:border-amber-400 focus:outline-none"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isSearchingPhone}
+                      className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-6 py-3 rounded-xl transition"
+                    >
+                      {isSearchingPhone ? 'Analyse...' : 'Auditer le Numéro'}
+                    </button>
+                  </form>
+
+                  {hasSearched && (
+                    <div className="pt-4 border-t border-slate-800">
+                      {searchResult ? (
+                        <div className="p-5 rounded-xl border bg-slate-950/70 border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6">
+                          <div className="space-y-2 text-center md:text-left">
+                            <div className="flex items-center gap-3">
+                              <span className="font-mono text-xl font-bold text-white">{searchResult.phone_number}</span>
+                              <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${
+                                searchResult.risk_level === 'LOW' ? 'bg-emerald-500/20 text-emerald-400' :
+                                searchResult.risk_level === 'MEDIUM' ? 'bg-amber-500/20 text-amber-400' :
+                                'bg-rose-500/20 text-rose-400 animate-pulse'
+                              }`}>
+                                {searchResult.risk_level === 'LOW' && '✓ CLIENT FIABLE'}
+                                {searchResult.risk_level === 'MEDIUM' && '⚠️ RISQUE MOYEN'}
+                                {searchResult.risk_level === 'HIGH' && '🚨 RISQUE ÉLEVÉ'}
+                                {searchResult.risk_level === 'BLACKLISTED' && '⛔ LISTE NOIRE'}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-400">
+                              Historique : <strong className="text-white">{searchResult.delivered_orders}</strong> livrées sur <strong className="text-white">{searchResult.total_orders}</strong> commandes.
+                            </p>
+                          </div>
+                          <div className="text-center p-4 bg-slate-900 border border-slate-800 rounded-xl min-w-[130px]">
+                            <div className="text-4xl font-black text-amber-400">{searchResult.trust_score}/100</div>
+                            <span className="text-[10px] text-slate-400 uppercase font-semibold">Indice de Confiance</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center text-slate-400 text-sm">
+                          ✨ Numéro jamais signalé. Aucun antécédent négatif dans la base partagée.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4">
+                  <h3 className="text-base font-bold text-white">📢 Signaler un Acheteur Fantôme ou Refus Abusif</h3>
+                  <form onSubmit={handleReportBuyer} className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <input
+                      type="text"
+                      required
+                      placeholder="Numéro (0661...)"
+                      value={reportPhone}
+                      onChange={(e) => setReportPhone(e.target.value)}
+                      className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white font-mono"
+                    />
+                    <select
+                      value={reportReason}
+                      onChange={(e) => setReportReason(e.target.value)}
+                      className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white"
+                    >
+                      <option value="Client Injoignable">Client Injoignable</option>
+                      <option value="Refus à l'ouverture">Refus à l'ouverture du colis</option>
+                      <option value="Numéro erroné / Fake">Faux numéro / Numéro erroné</option>
+                      <option value="Report abusif / Annulation">Report abusif puis annulation</option>
+                    </select>
+                    <button type="submit" className="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition">
+                      Ajouter au Répertoire Partagé
+                    </button>
+                  </form>
+                  {reportingStatus && <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs rounded-xl">{reportingStatus}</div>}
+                </div>
+              </div>
+            )}
+
+            {/* ONGLET FACTURATION */}
+            {activeTab === 'billing' && (
+              <div className="space-y-8 max-w-5xl mx-auto pt-4">
+                <div className="text-center max-w-2xl mx-auto space-y-2">
+                  <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-full border border-emerald-500/20">
+                    Paiements Sécurisés Algérie (BaridiMob / CCP)
+                  </span>
+                  <h1 className="text-3xl font-black text-white tracking-tight">Abonnements & Règlements</h1>
+                  <p className="text-slate-400 text-xs">
+                    Activez ou renouvelez votre accès instantanément via virement BaridiMob ou par capture de reçu.
+                  </p>
+
+                  <div className="pt-4 flex items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setBillingCycle('monthly')}
+                      className={`text-xs font-bold transition px-3 py-1 rounded-lg ${
+                        billingCycle === 'monthly' ? 'bg-slate-800 text-white border border-slate-700' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Mensuel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
+                      className="w-14 h-7 bg-slate-800 rounded-full p-1 transition-colors relative border border-slate-700"
+                    >
+                      <div className={`w-5 h-5 bg-emerald-500 rounded-full transition-transform ${billingCycle === 'yearly' ? 'translate-x-7' : 'translate-x-0'}`} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBillingCycle('yearly')}
+                      className={`text-xs font-bold transition px-3 py-1 rounded-lg flex items-center gap-1.5 ${
+                        billingCycle === 'yearly' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <span>Annuel (-10%)</span>
+                      <span className="text-[10px] bg-emerald-500 text-slate-950 font-black px-1.5 py-0.2 rounded">ÉCONOMIE</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-3 text-xs">
+                  <span className="text-slate-400">
+                    ⚙️ Simulateur de test (Expiration du compte) :
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setSubscriptionDaysLeft(18)}
+                      className={`px-3 py-1 rounded-lg font-bold ${subscriptionDaysLeft > 1 ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300'}`}
+                    >
+                      Compte Actif (18j)
+                    </button>
+                    <button
+                      onClick={() => setSubscriptionDaysLeft(1)}
+                      className={`px-3 py-1 rounded-lg font-bold ${subscriptionDaysLeft === 1 ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300'}`}
+                    >
+                      Alerte J-1 (Expire Demain)
+                    </button>
+                    <button
+                      onClick={() => setSubscriptionDaysLeft(0)}
+                      className={`px-3 py-1 rounded-lg font-bold ${subscriptionDaysLeft <= 0 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-300'}`}
+                    >
+                      Expiré (Bloqué 0j)
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div
+                    onClick={() => setSelectedPlan('free')}
+                    className={`p-6 rounded-3xl border cursor-pointer transition ${
+                      selectedPlan === 'free' ? 'border-emerald-500 bg-slate-900 ring-2 ring-emerald-500/40 shadow-xl' : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="text-base font-bold text-white">Pack Découverte</h3>
+                      <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">Essai</span>
+                    </div>
+                    <div className="text-3xl font-black text-white my-3">0 DZD</div>
+                    <p className="text-xs text-slate-400 mb-4">Pour tester l'audit sur un échantillon de 50 commandes.</p>
+                    <ul className="text-xs text-slate-300 space-y-2">
+                      <li>✓ 50 commandes analysées</li>
+                      <li>✓ Audit de base des tarifs de livraison</li>
+                      <li>✕ Détection IP & VPN désactivée</li>
+                    </ul>
+                  </div>
+
+                  <div
+                    onClick={() => setSelectedPlan('business')}
+                    className={`p-6 rounded-3xl border cursor-pointer relative transition ${
+                      selectedPlan === 'business' ? 'border-emerald-500 bg-slate-900 ring-2 ring-emerald-500 shadow-xl' : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
+                    }`}
+                  >
+                    <span className="absolute -top-3 right-4 bg-emerald-500 text-slate-950 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full shadow">
+                      Recommandé
+                    </span>
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="text-base font-bold text-white">Pack Business</h3>
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono">Complet</span>
+                    </div>
+                    <div className="text-3xl font-black text-white my-3">
+                      {getPrice('business').dzd.toLocaleString()} DZD
+                      <span className="text-xs font-normal text-slate-400 ml-1.5">{getPrice('business').periodText}</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mb-4">Pour les boutiques traitant jusqu'à 800 colis par mois.</p>
+                    <ul className="text-xs text-slate-300 space-y-2">
+                      <li>✓ Jusqu'à 800 colis / mois audités</li>
+                      <li>✓ Détection des surfacturations & litiges</li>
+                      <li>✓ Radar Anti-RTO & Score Acheteur</li>
+                      <li>✓ Connecteurs Yalidine + ZR Express</li>
+                    </ul>
+                  </div>
+
+                  <div
+                    onClick={() => setSelectedPlan('ultra')}
+                    className={`p-6 rounded-3xl border cursor-pointer transition ${
+                      selectedPlan === 'ultra' ? 'border-emerald-500 bg-slate-900 ring-2 ring-emerald-500/40 shadow-xl' : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="text-base font-bold text-white">Pack Ultra Illimité</h3>
+                      <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded font-mono">Élite</span>
+                    </div>
+                    <div className="text-3xl font-black text-white my-3">
+                      {getPrice('ultra').dzd.toLocaleString()} DZD
+                      <span className="text-xs font-normal text-slate-400 ml-1.5">{getPrice('ultra').periodText}</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mb-4">Idéal pour les agences e-commerce et gros distributeurs.</p>
+                    <ul className="text-xs text-slate-300 space-y-2">
+                      <li>✓ Volume de colis illimité</li>
+                      <li>✓ Tous transporteurs DZ connectés</li>
+                      <li>✓ Filtre anti-fraude IP / Proxy en temps réel</li>
+                      <li>✓ Support prioritaire 7j/7</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {selectedPlan !== 'free' && (
+                  <div className="bg-slate-900 border-2 border-emerald-500 rounded-3xl p-6 md:p-8 space-y-6 shadow-2xl">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-5">
+                      <div>
+                        <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded-full">
+                          Paiement Sécurisé BaridiMob / CCP
+                        </span>
+                        <h3 className="text-2xl font-black text-white mt-2">
+                          Montant net à transférer : <span className="text-emerald-400 font-mono">{getPrice(selectedPlan).dzd.toLocaleString()} DZD</span>
+                        </h3>
+                        <p className="text-[11px] text-slate-400 mt-1">{getPrice(selectedPlan).detailText}</p>
+                      </div>
+                      <div className="text-xs text-slate-400 bg-slate-950 px-4 py-2 rounded-xl border border-slate-800">
+                        Activation sous <strong className="text-emerald-400">15 minutes</strong>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-1">
+                        <span className="text-xs text-slate-400">Bénéficiaire Officiel :</span>
+                        <div className="text-base font-bold text-white">{corporateBillingEntity}</div>
+                        <span className="text-[11px] text-emerald-400">Compte vérifié Algérie Poste</span>
+                      </div>
+
+                      <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+                        <span className="text-xs text-slate-400">Numéro RIP BaridiMob (20 chiffres) :</span>
+                        <div className="flex items-center justify-between bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+                          <span className="font-mono text-emerald-400 font-bold text-sm select-all tracking-wider">{billingRip}</span>
                           <button
-                            onClick={() => handleClaimGhost(g)}
-                            className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-[11px] transition shadow flex items-center gap-1.5 ml-auto"
+                            onClick={handleCopyRip}
+                            className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow ${
+                              copySuccess
+                                ? 'bg-emerald-400 text-slate-950 ring-2 ring-emerald-300'
+                                : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
+                            }`}
                           >
-                            <span>🚨</span>
-                            <span>Lancer Réclamation Perte</span>
+                            <span>{copySuccess ? '✓' : '📋'}</span>
+                            <span>{copySuccess ? 'Copié !' : 'Copier RIP'}</span>
                           </button>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-xl font-bold text-[11px]">
-                            <span>✓</span>
-                            <span>Réclamation Transmise (Dossier Ouvert)</span>
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+                        </div>
+                      </div>
+                    </div>
 
-        {/* ONGLET COMMANDES & FRAUDE */}
-        {activeTab === 'orders_fraud' && (
-          <div className="space-y-6 max-w-6xl mx-auto pt-2">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <span className="text-xs bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
-                  Protection Checkout Temps Réel
-                </span>
-                <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
-                  Commandes Entrantes & Radar Anti-Fraude IP
-                </h1>
-                <p className="text-slate-400 text-xs mt-1">
-                  Filtrage automatique des commandes issues de VPN étrangers, numéros fictifs et faux acheteurs.
-                </p>
-              </div>
+                    <div className="space-y-4 pt-2">
+                      <h4 className="text-sm font-bold text-white uppercase tracking-wider">
+                        Transmettre votre preuve de règlement :
+                      </h4>
 
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleSimulateWebhook('legit')}
-                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3.5 py-2 rounded-xl text-xs transition shadow"
-                >
-                  + Simuler Commande Saine (Alger)
-                </button>
-                <button
-                  onClick={() => handleSimulateWebhook('fraud')}
-                  className="bg-rose-600 hover:bg-rose-500 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition shadow"
-                >
-                  🚨 Simuler Attaque VPN
-                </button>
-              </div>
-            </div>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        accept="image/*,.pdf"
+                        onChange={(e) => e.target.files?.[0] && handleReceiptUpload(e.target.files[0])}
+                        className="hidden"
+                      />
+                      <input
+                        type="file"
+                        ref={cameraInputRef}
+                        accept="image/*"
+                        capture="environment"
+                        onChange={(e) => e.target.files?.[0] && handleReceiptUpload(e.target.files[0])}
+                        className="hidden"
+                      />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
-                <span className="text-xs text-slate-400">Commandes Saines Approuvées</span>
-                <div className="text-3xl font-black text-emerald-400 mt-1">
-                  {fraudOrders.filter(o => o.status === 'APPROUVE').length} commandes
-                </div>
-                <span className="text-[11px] text-emerald-300">Prêtes pour expédition immédiate</span>
-              </div>
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
-                <span className="text-xs text-slate-400">Commandes Bloquées (VPN / Fraud)</span>
-                <div className="text-3xl font-black text-rose-400 mt-1">
-                  {fraudOrders.filter(o => o.status === 'BLOQUE').length} bloquées
-                </div>
-                <span className="text-[11px] text-rose-300">Économie de frais d'envoi et de retour</span>
-              </div>
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
-                <span className="text-xs text-slate-400">Endpoint Webhook Actif</span>
-                <div className="text-xs font-mono text-cyan-400 mt-2 truncate bg-slate-950 p-2 rounded-lg border border-slate-800 select-all">
-                  /api/orders/webhook
-                </div>
-                <span className="text-[10px] text-slate-500">Prêt pour Shopify / YouCan / WooCommerce</span>
-              </div>
-            </div>
+                      {receiptUploadSuccess && (
+                        <div className="p-4 bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-sm rounded-2xl text-center font-bold">
+                          {receiptUploadSuccess}
+                        </div>
+                      )}
 
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
-                  <tr>
-                    <th className="p-4">N° Commande</th>
-                    <th className="p-4">Client</th>
-                    <th className="p-4">Numéro Téléphone</th>
-                    <th className="p-4">Adresse IP Client</th>
-                    <th className="p-4">Détection VPN</th>
-                    <th className="p-4">Score Confiance</th>
-                    <th className="p-4 text-right">Décision Système</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-sans">
-                  {fraudOrders.map((ord, idx) => (
-                    <tr key={idx} className="hover:bg-slate-800/30">
-                      <td className="p-4 font-mono font-bold text-white">{ord.orderId}</td>
-                      <td className="p-4 text-slate-200 font-medium">{ord.customerName}</td>
-                      <td className="p-4 font-mono text-slate-300">{ord.phone}</td>
-                      <td className="p-4 font-mono text-slate-400">{ord.ipAddress}</td>
-                      <td className="p-4">
-                        {ord.isVpn ? (
-                          <span className="px-2 py-0.5 bg-rose-500/20 text-rose-400 font-bold rounded border border-rose-500/40">
-                            🚨 VPN / Datacenter Détecté
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 font-bold rounded border border-emerald-500/40">
-                            ✓ IP Résidentielle DZ
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-4 font-mono font-black text-sm">
-                        <span className={ord.score >= 70 ? 'text-emerald-400' : ord.score >= 40 ? 'text-amber-400' : 'text-rose-500'}>
-                          {ord.score}/100
+                      {receiptUploadError && (
+                        <div className="p-4 bg-rose-500/15 border border-rose-500/40 text-rose-300 text-sm rounded-2xl text-center font-bold">
+                          {receiptUploadError}
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <button
+                          type="button"
+                          disabled={isUploadingReceipt}
+                          onClick={() => fileInputRef.current?.click()}
+                          className="p-3.5 bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-800 text-slate-950 font-bold rounded-2xl text-xs flex flex-col items-center justify-center gap-1.5 transition shadow"
+                        >
+                          <span className="text-lg">📁</span>
+                          <span>Téléverser Capture</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={isUploadingReceipt}
+                          onClick={() => cameraInputRef.current?.click()}
+                          className="p-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl text-xs flex flex-col items-center justify-center gap-1.5 transition border border-slate-700"
+                        >
+                          <span className="text-lg">📷</span>
+                          <span>Prendre en Photo</span>
+                        </button>
+
+                        <a
+                          href={`https://wa.me/${supportWhatsAppNumber}?text=${encodeURIComponent(
+                            `Bonjour, j'ai effectué le virement BaridiMob de ${getPrice(selectedPlan).dzd.toLocaleString()} DZD pour le ${plans[selectedPlan].name} (${billingCycle === 'yearly' ? 'Formule Annuelle -10%' : 'Formule Mensuelle'}). Voici la capture d'écran de ma quittance pour activation de ma licence.`
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-3.5 bg-[#25D366] hover:bg-[#20ba59] text-slate-950 font-bold rounded-2xl text-xs flex flex-col items-center justify-center gap-1.5 transition shadow"
+                        >
+                          <span className="text-lg">💬</span>
+                          <span>Envoyer sur WhatsApp</span>
+                        </a>
+
+                        <button
+                          type="button"
+                          onClick={handleOpenEmail}
+                          className="p-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl text-xs flex flex-col items-center justify-center gap-1.5 transition border border-slate-700"
+                        >
+                          <span className="text-lg">✉️</span>
+                          <span>Ouvrir Gmail Direct</span>
+                          <span className="text-[9px] text-slate-400 font-mono">weekyfy@gmail.com</span>
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800/80 text-xs">
+                        <span className="text-slate-400">
+                          Vous préférez envoyer depuis une autre application ?
                         </span>
-                      </td>
-                      <td className="p-4 text-right">
-                        <span className={`px-2.5 py-1 rounded text-[10px] font-black ${
-                          ord.status === 'APPROUVE' ? 'bg-emerald-500/20 text-emerald-400' :
-                          ord.status === 'SUSPECT' ? 'bg-amber-500/20 text-amber-400' : 'bg-rose-500/20 text-rose-400'
-                        }`}>
-                          {ord.status === 'APPROUVE' && '✓ VALIDÉE'}
-                          {ord.status === 'SUSPECT' && '⚠️ ENQUÊTE APPEL'}
-                          {ord.status === 'BLOQUE' && '⛔ REJETÉE'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* ONGLET WILAYAS */}
-        {activeTab === 'wilayas' && (
-          <div className="space-y-6 max-w-6xl mx-auto pt-2">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div>
-                <span className="text-xs bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
-                  Moteur P&L & Arbitrage Publicitaire
-                </span>
-                <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
-                  Rentabilité Nette par Wilaya & Décisions Meta Ads
-                </h1>
-                <p className="text-slate-400 text-xs mt-1">
-                  Chiffre d'affaires encaissé vs Coûts réels de retours pour optimiser vos budgets publicitaires.
-                </p>
+                        <button
+                          type="button"
+                          onClick={handleCopyEmail}
+                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 font-mono font-bold rounded-lg border border-slate-700 transition"
+                        >
+                          {copyEmailSuccess ? '✓ Email Copié !' : '📋 Copier weekyfy@gmail.com'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
+            )}
 
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setWilayaFilter('ALL')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                    wilayaFilter === 'ALL' ? 'bg-slate-800 text-white border border-slate-700' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Toutes
-                </button>
-                <button
-                  onClick={() => setWilayaFilter('SCALE')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                    wilayaFilter === 'SCALE' ? 'bg-emerald-500 text-slate-950 font-black' : 'text-emerald-400 hover:bg-emerald-500/10'
-                  }`}
-                >
-                  🚀 À Scaler Meta Ads
-                </button>
-                <button
-                  onClick={() => setWilayaFilter('EXCLUDE')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                    wilayaFilter === 'EXCLUDE' ? 'bg-rose-600 text-white font-black' : 'text-rose-400 hover:bg-rose-500/10'
-                  }`}
-                >
-                  ⛔ À Exclure Meta Ads
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
-                <span className="text-xs text-slate-400">Wilayas Hautement Rentables</span>
-                <div className="text-3xl font-black text-emerald-400 mt-1">
-                  {wilayaStats.filter(w => w.recommendation === 'SCALE_ADS').length} Wilayas
+            {/* ONGLET CONNECTEURS */}
+            {activeTab === 'connectors' && (
+              <div className="space-y-6 max-w-5xl mx-auto pt-2">
+                <div>
+                  <span className="text-xs bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                    Passerelles Transporteurs Directes
+                  </span>
+                  <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
+                    Synchronisation Yalidine & ZR Express
+                  </h1>
+                  <p className="text-slate-400 text-xs mt-1">
+                    Connectez vos comptes d'expédition pour auditer automatiquement vos bordereaux sans téléchargement manuel de fichiers.
+                  </p>
                 </div>
-                <span className="text-[11px] text-emerald-300">Taux de livraison supérieur à 85%</span>
-              </div>
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
-                <span className="text-xs text-slate-400">Wilayas Déficitaires</span>
-                <div className="text-3xl font-black text-rose-400 mt-1">
-                  {wilayaStats.filter(w => w.recommendation === 'EXCLUDE_ADS').length} Wilayas
+
+                {syncMessage && (
+                  <div className="p-4 bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs rounded-2xl font-bold">
+                    {syncMessage}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="p-6 bg-slate-900 border border-slate-800 rounded-3xl space-y-4 shadow-xl">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-black text-white text-base">
+                          YAL
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-white text-base">Yalidine Express API</h3>
+                          <span className="text-[10px] text-emerald-400 font-semibold">Service Web V1 & V2</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono font-bold">
+                        Connecté
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-[11px] text-slate-400 block mb-1">API ID (Yalidine) :</label>
+                        <input
+                          type="text"
+                          value={yalId}
+                          onChange={(e) => setYalId(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-slate-400 block mb-1">API Token :</label>
+                        <input
+                          type="password"
+                          value={yalToken}
+                          onChange={(e) => setYalToken(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleTestConnector('Yalidine')}
+                      className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow"
+                    >
+                      🔄 Tester & Synchroniser les Quittances
+                    </button>
+                  </div>
+
+                  <div className="p-6 bg-slate-900 border border-slate-800 rounded-3xl space-y-4 shadow-xl">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-amber-600 flex items-center justify-center font-black text-white text-base">
+                          ZR
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-white text-base">ZR Express API</h3>
+                          <span className="text-[10px] text-amber-400 font-semibold">Passerelle Marchand Pro</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded font-mono font-bold">
+                        Actif
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-[11px] text-slate-400 block mb-1">API Key :</label>
+                        <input
+                          type="text"
+                          value={zrKey}
+                          onChange={(e) => setZrKey(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-slate-400 block mb-1">Secret Token :</label>
+                        <input
+                          type="password"
+                          value={zrSecret}
+                          onChange={(e) => setZrSecret(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleTestConnector('ZR Express')}
+                      className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow"
+                    >
+                      🔄 Tester & Synchroniser les Quittances
+                    </button>
+                  </div>
                 </div>
-                <span className="text-[11px] text-rose-300">Pertes de retours supérieures aux bénéfices</span>
               </div>
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
-                <span className="text-xs text-slate-400">Économie publicitaire mensuelle estimée</span>
-                <div className="text-3xl font-black text-white mt-1">+65 000 DZD</div>
-                <span className="text-[11px] text-slate-400">En excluant les wilayas à risque de vos Adsets</span>
-              </div>
-            </div>
+            )}
 
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-mono">
-                  <tr>
-                    <th className="p-4">Wilaya</th>
-                    <th className="p-4">Expédiés</th>
-                    <th className="p-4">Taux Livré</th>
-                    <th className="p-4">CA Encaissé</th>
-                    <th className="p-4">Pertes Retours</th>
-                    <th className="p-4">Marge Nette Réelle</th>
-                    <th className="p-4 text-right">Décision Meta Ads</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-sans">
-                  {filteredWilayas.map((w, idx) => (
-                    <tr key={idx} className="hover:bg-slate-800/30">
-                      <td className="p-4 font-bold text-white">{w.code} - {w.name}</td>
-                      <td className="p-4 font-mono text-slate-300">{w.totalShipped} colis</td>
-                      <td className="p-4 font-mono font-bold text-emerald-400">{w.deliveredRate}%</td>
-                      <td className="p-4 font-mono text-slate-200">{w.grossSalesDzd.toLocaleString()} DZD</td>
-                      <td className="p-4 font-mono text-rose-400 font-bold">-{w.rtoLossDzd.toLocaleString()} DZD</td>
-                      <td className="p-4 font-mono font-black">
-                        <span className={w.netMarginDzd > 0 ? 'text-emerald-400' : 'text-rose-500'}>
-                          {w.netMarginDzd > 0 ? `+${w.netMarginDzd.toLocaleString()} DZD` : `${w.netMarginDzd.toLocaleString()} DZD`}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${
-                          w.recommendation === 'SCALE_ADS' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' :
-                          w.recommendation === 'HEALTHY' ? 'bg-blue-500/20 text-blue-300' :
-                          w.recommendation === 'REQUIRE_DEPOSIT' ? 'bg-amber-500/20 text-amber-300' :
-                          'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                        }`}>
-                          {w.recommendation === 'SCALE_ADS' && '🚀 SCALER ADS'}
-                          {w.recommendation === 'HEALTHY' && '✓ STABLE'}
-                          {w.recommendation === 'REQUIRE_DEPOSIT' && '⚠️ EXIGER ACOMPTE'}
-                          {w.recommendation === 'EXCLUDE_ADS' && '⛔ EXCLURE ADS'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* ONGLET CONTACT */}
-        {activeTab === 'contact' && (
-          <div className="space-y-6 max-w-3xl mx-auto pt-2">
-            <h2 className="text-2xl font-black text-white">Support & Assistance</h2>
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-3 text-xs">
-              <div className="flex justify-between items-center p-3.5 bg-slate-950 rounded-xl border border-slate-800/80">
-                <span className="text-slate-400">Support WhatsApp Officiel :</span>
-                <a
-                  href={`https://wa.me/${supportWhatsAppNumber}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-emerald-400 font-mono font-bold hover:underline flex items-center gap-1.5"
-                >
-                  <span>💬</span>
-                  <span>+213 {supportWhatsAppDisplay}</span>
-                </a>
+            {/* ONGLET SUPPORT */}
+            {activeTab === 'contact' && (
+              <div className="space-y-6 max-w-3xl mx-auto pt-2">
+                <h2 className="text-2xl font-black text-white">Support & Assistance</h2>
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-3 text-xs">
+                  <div className="flex justify-between items-center p-3.5 bg-slate-950 rounded-xl border border-slate-800/80">
+                    <span className="text-slate-400">Support WhatsApp Officiel :</span>
+                    <a
+                      href={`https://wa.me/${supportWhatsAppNumber}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-emerald-400 font-mono font-bold hover:underline flex items-center gap-1.5"
+                    >
+                      <span>💬</span>
+                      <span>+213 {supportWhatsAppDisplay}</span>
+                    </a>
+                  </div>
+                  <div className="flex justify-between items-center p-3.5 bg-slate-950 rounded-xl border border-slate-800/80">
+                    <span className="text-slate-400">Email commercial & quittances :</span>
+                    <a
+                      href={`mailto:${supportEmail}`}
+                      className="text-white font-mono hover:text-emerald-400 transition"
+                    >
+                      {supportEmail}
+                    </a>
+                  </div>
+                  <div className="flex justify-between items-center p-3.5 bg-slate-950 rounded-xl border border-slate-800/80">
+                    <span className="text-slate-400">Entité émettrice :</span>
+                    <span className="text-white font-medium">{corporateBillingEntity}</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between items-center p-3.5 bg-slate-950 rounded-xl border border-slate-800/80">
-                <span className="text-slate-400">Email commercial & quittances :</span>
-                <a
-                  href={`mailto:${supportEmail}`}
-                  className="text-white font-mono hover:text-emerald-400 transition"
-                >
-                  {supportEmail}
-                </a>
-              </div>
-              <div className="flex justify-between items-center p-3.5 bg-slate-950 rounded-xl border border-slate-800/80">
-                <span className="text-slate-400">Entité émettrice :</span>
-                <span className="text-white font-medium">{corporateBillingEntity}</span>
-              </div>
-            </div>
-          </div>
+            )}
+          </>
         )}
       </main>
     </div>
